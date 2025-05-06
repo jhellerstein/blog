@@ -1,12 +1,14 @@
 {
-  "name": "gatsby-starter-blog",
+  "name": "async-stream-blog",
   "private": true,
-  "description": "A starter for a blog powered by Gatsby and Markdown",
-  "version": "0.1.0",
-  "author": "Kyle Mathews <mathews.kyle@gmail.com>",
+  "description": "A personal blog on distributed systems, languages, and computing by Joe Hellerstein.",
+  "version": "1.0.0",
+  "author": "Joe Hellerstein <jmh@cs.berkeley.edu>",
   "bugs": {
-    "url": "https://github.com/gatsbyjs/gatsby/issues"
+    "url": "https://github.com/jhellerstein/blog/issues"
   },
+  ...
+},
   "dependencies": {
     "@fontsource-variable/montserrat": "^5.0.17",
     "@fontsource/merriweather": "^5.0.8",
@@ -32,14 +34,14 @@
   "devDependencies": {
     "prettier": "^2.8.8"
   },
-  "homepage": "https://github.com/gatsbyjs/gatsby-starter-blog#readme",
+  "homepage": "https://jhellerstein.github.io/blog",
   "keywords": [
     "gatsby"
   ],
   "license": "0BSD",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/gatsbyjs/gatsby-starter-blog.git"
+    "url": "git+https://github.com/jhellerstein/blog.git"
   },
   "scripts": {
     "build": "gatsby build",
