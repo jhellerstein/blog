@@ -8,15 +8,19 @@ const Layout = ({ location, title, children }) => {
 
   if (isRootPath) {
     header = (
-      <h1 className="main-heading">
-        <Link to="/">{title}</Link>
-      </h1>
+      <div className="banner">
+        <h1 className="site-title main-heading">
+          <Link to="/">{title}</Link>
+        </h1>
+      </div>
     )
   } else {
     header = (
-      <Link className="header-link-home" to="/">
-        {title}
-      </Link>
+      <div className="banner">
+        <Link className="site-title header-link-home" to="/">
+          {title}
+        </Link>
+      </div>
     )
   }
 
@@ -25,8 +29,7 @@ const Layout = ({ location, title, children }) => {
       <header className="global-header">{header}</header>
       <main>{children}</main>
       <footer>
-        © {new Date().getFullYear()}, Built with
-        {` `}
+        © {new Date().getFullYear()}, Built with{" "}
         <a href="https://www.gatsbyjs.com">Gatsby</a>
       </footer>
     </div>

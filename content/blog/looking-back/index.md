@@ -2,10 +2,8 @@
 title: "Looking Back to Look Ahead"
 date: 2025-04-30
 categories: intro
-image: /images/looking-back.png
+featuredImage: ./looking-back.png
 ---
-<!-- <img src="{{ site.baseurl }}/assets/images/looking-back.png" alt="Looking back to look ahead"
-     style="float: right; margin: 0 0 1em 1em; width: 250px; max-width: 40%;" /> -->
 
 This is the second of two background posts reflecting on my technical interests, to set some context for this blog.
 While there's no breaking news here, I hope that outlining my long-term threads of work might spark interest or recognition. If something resonates, I’d love to hear what caught your eye.

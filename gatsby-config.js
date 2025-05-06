@@ -12,12 +12,13 @@ module.exports = {
     title: `Async Stream`,
     author: {
       name: `Joe Hellerstein`,
-      summary: `CS Professor at UC Berkeley, Hydrologist.`,
+      summary: `CS Professor at UC Berkeley. Hydro-ologist.`,
     },
-    description: `Thoughts on programming, computing and data.`,
+    description: `Data drives computing.`,
     siteUrl: `https://jhellerstein.github.io/blog`,
     social: {
-      bluesky: `joe_hellerstein.bsky.social`,
+      twitter: `joe_hellerstein`,
+      bluesky: `joehellerstein.bsky.social`,
       github: `jhellerstein`,
       linkedin: `joehellerstein`,
     },

@@ -8,6 +8,7 @@
 import * as React from "react"
 import { useStaticQuery, graphql } from "gatsby"
 import { StaticImage } from "gatsby-plugin-image"
+import { FaGithub, FaLinkedin, FaCloud } from "react-icons/fa"
 
 const Bio = () => {
   const data = useStaticQuery(graphql`
@@ -18,17 +19,18 @@ const Bio = () => {
             name
             summary
           }
+          description
           social {
-            twitter
+            github
+            linkedin
+            bluesky
           }
         }
       }
     }
   `)
 
-  // Set these values by editing "siteMetadata" in gatsby-config.js
-  const author = data.site.siteMetadata?.author
-  const social = data.site.siteMetadata?.social
+  const { author, description, social } = data.site.siteMetadata
 
   return (
     <div className="bio">
@@ -44,11 +46,25 @@ const Bio = () => {
       />
       {author?.name && (
         <p>
-          Written by <strong>{author.name}</strong> <br></br>{author?.summary || null}
-          {` `}
-          {/* <a href={`https://twitter.com/${social?.twitter || ``}`}>
-            You should follow them on Twitter
-          </a> */}
+          <strong>{author.name}</strong>
+          <br />
+          <em>{author?.summary}</em>
+          {description && (
+            <>
+              <br />
+              <em>{description}</em>
+            </>
+          )}
+          <br />
+          <a href={`https://github.com/${social.github}`} title="GitHub" style={{ marginRight: '0.5rem' }}>
+            <FaGithub />
+          </a>
+          <a href={`https://linkedin.com/in/${social.linkedin}`} title="LinkedIn" style={{ marginRight: '0.5rem' }}>
+            <FaLinkedin />
+          </a>
+          <a href={`https://${social.bluesky}`} title="Bluesky">
+            <FaCloud />
+          </a>
         </p>
       )}
     </div>

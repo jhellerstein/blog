@@ -1,5 +1,6 @@
 import * as React from "react"
 import { Link, graphql } from "gatsby"
+import { GatsbyImage, getImage } from "gatsby-plugin-image"
 
 import Bio from "../components/bio"
 import Layout from "../components/layout"
@@ -10,6 +11,7 @@ const BlogPostTemplate = ({
   location,
 }) => {
   const siteTitle = site.siteMetadata?.title || `Title`
+  const image = getImage(post.frontmatter.featuredImage)
 
   return (
     <Layout location={location} title={siteTitle}>
@@ -19,9 +21,28 @@ const BlogPostTemplate = ({
         itemType="http://schema.org/Article"
       >
         <header>
-          <h1 itemProp="headline">{post.frontmatter.title}</h1>
-          <p>{post.frontmatter.date}</p>
+          <h1 className="blog-post-title" itemProp="headline">{post.frontmatter.title}</h1>
+          <p>
+            {post.frontmatter.date}
+            {` • `}
+            {post.fields.readingTime}
+          </p>
         </header>
+
+        {image && (
+          <GatsbyImage
+            image={image}
+            alt={post.frontmatter.title}
+            style={{
+              float: "right",
+              width: "30%",
+              marginLeft: "1rem",
+              marginBottom: "1rem",
+              borderRadius: "6px",
+            }}
+          />
+        )}
+
         <section
           dangerouslySetInnerHTML={{ __html: post.html }}
           itemProp="articleBody"
@@ -61,14 +82,12 @@ const BlogPostTemplate = ({
   )
 }
 
-export const Head = ({ data: { markdownRemark: post } }) => {
-  return (
-    <Seo
-      title={post.frontmatter.title}
-      description={post.frontmatter.description || post.excerpt}
-    />
-  )
-}
+export const Head = ({ data: { markdownRemark: post } }) => (
+  <Seo
+    title={post.frontmatter.title}
+    description={post.frontmatter.description || post.excerpt}
+  />
+)
 
 export default BlogPostTemplate
 
@@ -87,10 +106,18 @@ export const pageQuery = graphql`
       id
       excerpt(pruneLength: 160)
       html
+      fields {
+        readingTime
+      }
       frontmatter {
         title
         date(formatString: "MMMM DD, YYYY")
         description
+        featuredImage {
+          childImageSharp {
+            gatsbyImageData(width: 800, layout: CONSTRAINED)
+          }
+        }
       }
     }
     previous: markdownRemark(id: { eq: $previousPostId }) {
