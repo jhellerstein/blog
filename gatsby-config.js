@@ -9,15 +9,17 @@
  */
 module.exports = {
   siteMetadata: {
-    title: `Gatsby Starter Blog`,
+    title: `Async Stream`,
     author: {
-      name: `Kyle Mathews`,
-      summary: `who lives and works in San Francisco building useful things.`,
+      name: `Joe Hellerstein`,
+      summary: `CS Professor at UC Berkeley, Hydrologist.`,
     },
-    description: `A starter blog demonstrating what Gatsby can do.`,
-    siteUrl: `https://gatsbystarterblogsource.gatsbyjs.io/`,
+    description: `Thoughts on programming, computing and data.`,
+    siteUrl: `https://jhellerstein.github.io/blog`,
     social: {
-      twitter: `kylemathews`,
+      bluesky: `joe_hellerstein.bsky.social`,
+      github: `jhellerstein`,
+      linkedin: `joehellerstein`,
     },
   },
   plugins: [
@@ -110,8 +112,8 @@ module.exports = {
     {
       resolve: `gatsby-plugin-manifest`,
       options: {
-        name: `Gatsby Starter Blog`,
-        short_name: `Gatsby`,
+        name: `Async Stream`,
+        short_name: `AsyncStream`,
         start_url: `/`,
         background_color: `#ffffff`,
         // This will impact how browsers show your PWA/website
