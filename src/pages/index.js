@@ -1,5 +1,6 @@
 import * as React from "react"
 import { Link, graphql } from "gatsby"
+import { GatsbyImage, getImage } from "gatsby-plugin-image"
 import Bio from "../components/bio"
 import Layout from "../components/layout"
 import Seo from "../components/seo"
@@ -37,6 +38,7 @@ const BlogIndex = ({ data, location }) => {
           <ol style={{ listStyle: `none` }}>
             {posts.map(post => {
               const title = post.frontmatter.title || post.fields.slug
+              const featuredImage = getImage(post.frontmatter.featuredImage)
               return (
                 <li key={post.fields.slug}>
                   <article
@@ -44,25 +46,36 @@ const BlogIndex = ({ data, location }) => {
                     itemScope
                     itemType="http://schema.org/Article"
                   >
-                    <header>
-                      <h2>
-                        <Link to={post.fields.slug} itemProp="url">
-                          <span itemProp="headline">{title}</span>
-                        </Link>
-                      </h2>
-                      <small>
-                        {post.frontmatter.date}
-                        {post.fields.readingTime && ` • ${post.fields.readingTime}`}
-                      </small>
-                    </header>
-                    <section>
-                      <p
-                        dangerouslySetInnerHTML={{
-                          __html: post.frontmatter.description || post.excerpt,
-                        }}
-                        itemProp="description"
-                      />
-                    </section>
+                    <div className="post-thumbnail-layout">
+                      <div className="post-thumbnail-text">
+                        <header>
+                          <h2>
+                            <Link to={post.fields.slug} itemProp="url">
+                              <span itemProp="headline">{title}</span>
+                            </Link>
+                          </h2>
+                          <small>
+                            {post.frontmatter.date}
+                            {post.fields.readingTime && ` • ${post.fields.readingTime}`}
+                          </small>
+                        </header>
+                        <section>
+                          <p
+                            dangerouslySetInnerHTML={{
+                              __html: post.frontmatter.description || post.excerpt,
+                            }}
+                            itemProp="description"
+                          />
+                        </section>
+                      </div>
+                      {featuredImage && (
+                        <GatsbyImage
+                          image={featuredImage}
+                          alt={title}
+                          className="post-thumbnail"
+                        />
+                      )}
+                    </div>
                   </article>
                 </li>
               )
@@ -96,8 +109,13 @@ export const pageQuery = graphql`
           date(formatString: "MMMM DD, YYYY")
           title
           description
+          featuredImage {
+            childImageSharp {
+              gatsbyImageData(width: 100, placeholder: BLURRED, formats: [AUTO, WEBP])
+            }
+          }
         }
       }
     }
   }
-    `
+`
