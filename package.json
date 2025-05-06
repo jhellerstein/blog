@@ -7,8 +7,6 @@
   "bugs": {
     "url": "https://github.com/jhellerstein/blog/issues"
   },
-  ...
-},
   "dependencies": {
     "@fontsource-variable/montserrat": "^5.0.17",
     "@fontsource/merriweather": "^5.0.8",
