@@ -1,30 +1,35 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react"
 
 const ThemeToggle = () => {
-  const [theme, setTheme] = useState("light");
+  const [theme, setTheme] = useState("light")
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("theme");
-    const initialTheme = savedTheme || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-    setTheme(initialTheme);
-    document.documentElement.setAttribute("data-theme", initialTheme);
-  }, []);
+    const storedTheme = localStorage.getItem("theme") || "light"
+    setTheme(storedTheme)
+    document.documentElement.setAttribute("data-theme", storedTheme)
+  }, [])
 
   const toggleTheme = () => {
-    const newTheme = theme === "light" ? "dark" : "light";
-    setTheme(newTheme);
-    localStorage.setItem("theme", newTheme);
-    document.documentElement.setAttribute("data-theme", newTheme);
-  };
+    const newTheme = theme === "light" ? "dark" : "light"
+    setTheme(newTheme)
+    localStorage.setItem("theme", newTheme)
+    document.documentElement.setAttribute("data-theme", newTheme)
+  }
 
   return (
-    <div className="theme-toggle-container">
-      <label className="theme-switch">
-        <input type="checkbox" checked={theme === "dark"} onChange={toggleTheme} />
-        <span className="slider" />
-      </label>
-    </div>
-  );
-};
+    <label className="theme-switch">
+      <input
+        type="checkbox"
+        onChange={toggleTheme}
+        checked={theme === "dark"}
+        aria-label="Toggle theme"
+      />
+      <span className="slider">
+        <span className="icon sun">☀️</span>
+        <span className="icon moon">🌙</span>
+      </span>
+    </label>
+  )
+}
 
-export default ThemeToggle;
+export default ThemeToggle
