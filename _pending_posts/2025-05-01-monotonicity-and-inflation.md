@@ -10,14 +10,17 @@ sidebar:
   nav: "main"
 ------------------------------------------------------
 
-Like a lot of work on eventual consistency, the CRDT literature tends to be targeted at distributed systems researchers and developers. As such it sometimes leaves room for ambiguity.
+Like a lot of work on eventual consistency, the CRDT literature tends to be targeted at systems researchers and developers. As such it sometimes leaves room for mathematical ambiguity.
 
-This post untangles two subtle but important ideas in CRDT design, which turn out to be interrelated:
+The discussion below untangles two subtle but important ideas in CRDT design, which turn out to be interrelated:
 
 1. Determinism vs Convergence guarantees
 2. Algebraic property requirements for update functions.
 
-> tl;dr: If you want your CRDTs to be deterministic, your update functions better be inflationary. If you only care about convergence (eventual agreement), you can relax that constraint.
+Warning: this post is more technical and narrow than my previous CRDT posts. On the other hand it's deeper, and I believe it contains a small novel result. I'll be curious to hear about prior work that makes this point if it's out there!
+
+
+> tl;dr: If you want your CRDTs to be deterministic, your update functions must be inflationary. If you only care about convergence (eventual agreement), you can relax that constraint and still enjoy strong eventual consistency.
 
 ---
 
