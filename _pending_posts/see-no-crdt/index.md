@@ -1,12 +1,7 @@
 ---
-layout: single
 title: "CRDTs #2: Don't Look Now!"
-date: 2025-04-30
-categories: crdts lattices algebra distributed-systems eventual-consistency
-comments: true
-reading_time: true
-sidebar:
-  nav: "main"
+date: 2025-05-12
+featuredImage: ./seeno.png
 ---
 # CRDTs: Don't Look Now!
 
