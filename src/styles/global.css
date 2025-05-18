@@ -260,29 +260,45 @@ main {
    Sidebar & Profile
    ========================= */
 .profile {
-  text-align: center;
+  text-align: left;
+  padding: 0.5rem;
 }
 
 .profile-img {
-  width: 80px;
-  height: 80px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
+  margin-bottom: 0.3rem;
+}
+
+.profile h2 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0 0 0.2rem 0;
+  line-height: 1;
+  color: rgba(5, 5, 5, 0.95);
+}
+
+.profile p {
+  font-size: 0.8rem;
+  line-height: 1.2;
+  margin: 0;
+  color: rgba(121, 120, 120, 0.85);
 }
 
 .social-links {
   display: flex;
-  justify-content: center;
-  gap: 1rem;
-  margin-top: 1rem;
+  gap: 0.6rem;
+  margin-top: 0.4rem;
 }
 
-.social-links a {
-  color: #666;
-  font-size: 1.2rem;
+social-links a {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
   transition: color 0.2s ease;
 }
 
-.social-links a:hover {
+social-links a:hover {
   color: #ff9800;
 }
 
