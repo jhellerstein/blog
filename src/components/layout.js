@@ -1,32 +1,25 @@
-import * as React from "react"
-import { Link } from "gatsby"
-import ThemeToggle from "./ThemeToggle"
+import React from "react"
+import "../styles/global.css"
 
-const Layout = ({ location, title, children }) => {
-  const rootPath = `${__PATH_PREFIX__}/`
-  const isRootPath = location.pathname === rootPath
-
-  const header = (
-    <header className="global-header">
-      <h1 className="site-title">
-        <Link to="/">{title}</Link>
-      </h1>
-      <div className="theme-toggle-container">
-        <ThemeToggle />
-      </div>
+const Layout = ({ children, hero }) => (
+  <>
+    <header className="site-header">
+      <div className="site-title">Async Stream</div>
+      <nav className="site-nav">
+        <a href="/">Home</a>
+        <a href="/about">About</a>
+        <a href="/contact">Contact</a>
+      </nav>
     </header>
-  )
-
-  return (
-    <div className="global-wrapper" data-is-root-path={isRootPath}>
-      {header}
-      <main>{children}</main>
-      <footer>
-        © {new Date().getFullYear()}, Built with{" "}
-        <a href="https://www.gatsbyjs.com">Gatsby</a>
-      </footer>
+    {/* HERO OUTSIDE THE CONTAINER */}
+    {hero}
+    <div className="container">
+      {children}
     </div>
-  )
-}
+    <footer className="site-footer">
+      &copy; {new Date().getFullYear()} Async Stream. All rights reserved.
+    </footer>
+  </>
+)
 
 export default Layout

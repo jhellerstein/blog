@@ -11,7 +11,7 @@ const BlogPostTemplate = ({
   location,
 }) => {
   const siteTitle = site.siteMetadata?.title || `Title`
-  const image = getImage(post.frontmatter.featuredImage)
+  const image = getImage(post.frontmatter.coverImage)
 
   return (
     <Layout location={location} title={siteTitle}>
@@ -106,18 +106,18 @@ export const pageQuery = graphql`
       id
       excerpt(pruneLength: 160)
       html
-      fields {
-        readingTime
-      }
       frontmatter {
         title
         date(formatString: "MMMM DD, YYYY")
         description
-        featuredImage {
+        coverImage {
           childImageSharp {
             gatsbyImageData(width: 800, layout: CONSTRAINED)
           }
         }
+      }
+      fields {
+        readingTime
       }
     }
     previous: markdownRemark(id: { eq: $previousPostId }) {

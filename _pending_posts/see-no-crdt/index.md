@@ -1,7 +1,7 @@
 ---
 title: "CRDTs #2: Don't Look Now!"
 date: 2025-05-12
-featuredImage: ./seeno.png
+coverImage: ./seeno.png
 ---
 # CRDTs: Don't Look Now!
 

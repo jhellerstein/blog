@@ -1,8 +1,9 @@
 ---
 title: "Looking Back to Look Ahead"
-date: 2025-04-30
-categories: intro
-featuredImage: ./looking-back.png
+date: "2025-04-30"
+slug: "looking-back"
+coverImage: ./looking-back.png
+tags: ["research", "distributed-systems", "AI", "databases"]
 ---
 
 This is the second of two background posts reflecting on my technical interests, to set some context for this blog.

@@ -80,12 +80,13 @@ exports.createSchemaCustomization = ({ actions }) => {
 
     type Frontmatter {
       title: String!
-      date: Date! @dateformat
       description: String
+      date: Date! @dateformat
+      coverImage: File @fileByRelativePath
     }
 
     type Fields {
-      slug: String
+      slug: String!
       readingTime: String
     }
   `);

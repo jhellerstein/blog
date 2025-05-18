@@ -11,11 +11,16 @@ module.exports = {
   pathPrefix: "/blog",
   siteMetadata: {
     title: `Async Stream`,
+    description: `Data drives computing.`,
+    hero: {
+      title: `Welcome to Async Stream`,
+      tagline: `Occasional thoughts on coding, computing and data.`,
+      callToAction: `Check out my latest posts below`
+    },
     author: {
       name: `Joe Hellerstein`,
       summary: `CS Prof at Berkeley. Hydro-ologist.`,
     },
-    description: `Data drives computing.`,
     siteUrl: `https://jhellerstein.github.io/blog`,
     social: {
       twitter: `joe_hellerstein`,
@@ -43,11 +48,19 @@ module.exports = {
     {
       resolve: `gatsby-transformer-remark`,
       options: {
+        excerpt_separator: `<!-- endexcerpt -->`,
         plugins: [
           {
             resolve: `gatsby-remark-images`,
             options: {
-              maxWidth: 630,
+              maxWidth: 800,
+              linkImagesToOriginal: false,
+            },
+          },
+          {
+            resolve: `gatsby-remark-copy-linked-files`,
+            options: {
+              destinationDir: `blog-images`,
             },
           },
           {

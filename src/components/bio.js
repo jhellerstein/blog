@@ -33,40 +33,31 @@ const Bio = () => {
   const { author, description, social } = data.site.siteMetadata
 
   return (
-    <div className="bio">
+    <div className="profile">
       <StaticImage
-        className="bio-avatar"
+        className="profile-img"
         layout="fixed"
         formats={["auto", "webp", "avif"]}
         src="../images/profile-pic.jpg"
-        width={50}
-        height={50}
+        width={80}
+        height={80}
         quality={95}
-        alt="Profile picture"
+        alt={author.name}
       />
-      {author?.name && (
-        <p>
-          <strong>{author.name}</strong>
-          <br />
-          <em>{author?.summary}</em>
-          {description && (
-            <>
-              <br />
-              <em>{description}</em>
-            </>
-          )}
-          <br />
-          <a href={`https://github.com/${social.github}`} title="GitHub" style={{ marginRight: '0.5rem' }}>
-            <FaGithub />
-          </a>
-          <a href={`https://linkedin.com/in/${social.linkedin}`} title="LinkedIn" style={{ marginRight: '0.5rem' }}>
-            <FaLinkedin />
-          </a>
-          <a href={`https://${social.bluesky}`} title="Bluesky">
-            <FaCloud />
-          </a>
-        </p>
-      )}
+      <h2>{author.name}</h2>
+      <p>{author.summary}</p>
+      <p>{description}</p>
+      <div className="social-links">
+        <a href={`https://github.com/${social.github}`} title="GitHub">
+          <FaGithub />
+        </a>
+        <a href={`https://linkedin.com/in/${social.linkedin}`} title="LinkedIn">
+          <FaLinkedin />
+        </a>
+        <a href={`https://${social.bluesky}`} title="Bluesky">
+          <FaCloud />
+        </a>
+      </div>
     </div>
   )
 }
