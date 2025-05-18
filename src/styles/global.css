@@ -56,23 +56,23 @@ main {
 .site-header {
   background: linear-gradient(135deg, #1a1a1a, #2d3436 80%);
   color: #fff;
-  padding: clamp(1.2rem, 3vw, 1.8rem) clamp(2rem, 5vw, 4rem);
+  padding: clamp(1.5rem, 3vw, 2rem) clamp(2rem, 5vw, 4rem);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 0 2px 15px rgba(0,0,0,0.2), 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 15px rgba(0,0,0,0.2);
   position: relative;
   z-index: 100;
 }
 
 .site-title {
-  font-size: clamp(1.5rem, 3vw, 1.8rem);
+  font-size: clamp(1.8rem, 3vw, 2.2rem);
   font-weight: 700;
   letter-spacing: 1.2px;
   background: linear-gradient(120deg, #ff9800, #ffd95a 70%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  text-decoration: none;
 }
 
 .site-nav {
@@ -122,41 +122,49 @@ main {
   max-width: 100%;
   box-sizing: border-box;
   background: #fff;
-  padding: 2.5rem 2rem 2rem 2rem;
+  padding: 1.5rem 2rem;
   border-radius: 12px;
-  margin-bottom: 2.5rem;
+  margin-bottom: 2rem;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
   text-align: left;
-  /* Remove any float or grid/flex constraints */
   grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
 }
 
-.hero h1 {
-  margin: 0 0 0.5rem 0;
-  font-size: 2.2rem;
-  font-weight: 700;
+.hero-content {
+  flex: 1;
 }
 
 .hero-tagline {
   font-size: 1.2rem;
-  color: #555;
-  margin: 0;
+  font-weight: 400;
+  color: #2d3436;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.hero-description {
+  font-size: 1rem;
+  color: #666;
+  margin: 0 0 1rem 0;
+  max-width: 600px;
+  line-height: 1.4;
 }
 
 .hero-cta {
   display: inline-block;
-  margin-top: 1rem;
-  padding: 0.8rem 1.5rem;
+  padding: 0.6rem 1.2rem;
   background: linear-gradient(90deg, #ff9800, #ffd95a);
   color: #1a1a1a;
   font-weight: 500;
+  font-size: 0.9rem;
   border-radius: 4px;
   text-decoration: none;
   transition: transform 0.2s ease;
-}
-
-.hero-cta:hover {
-  transform: translateY(-2px);
 }
 
 /* =========================
