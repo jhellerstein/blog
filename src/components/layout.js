@@ -10,41 +10,30 @@ const Layout = ({ children }) => {
 
   return (
     <>
-      {isHome ? (
-        <div className="banner-hero">
-          <img
-            src={asyncStreamBanner}
-            alt="Async Stream Banner"
-            className="site-banner"
-          />
-          <div className="banner-overlay">
-            <div className="banner-header">
-              <div className="site-title">
-                <Link to="/">Async Stream</Link>
-              </div>
-              <nav className="site-nav">
-                <a href="/">Home</a>
-                <a href="/about">About</a>
-                <a href="/contact">Contact</a>
-              </nav>
+      <div className="banner-hero">
+        <img
+          src={asyncStreamBanner}
+          alt="Async Stream Banner"
+          className="site-banner"
+        />
+        <div className="banner-overlay">
+          <div className="banner-header">
+            <div className="site-title">
+              <Link to="/">Async Stream</Link>
             </div>
+            <nav className="site-nav">
+              <Link to="/">Home</Link>
+              <Link to="/about">About</Link>
+              <Link to="/contact">Contact</Link>
+            </nav>
+          </div>
+          {isHome && (
             <div className="banner-tagline">
               Occasional thoughts on coding, computing and data.
             </div>
-          </div>
+          )}
         </div>
-      ) : (
-        <header className="site-header">
-          <div className="site-title">
-            <Link to="/">Async Stream</Link>
-          </div>
-          <nav className="site-nav">
-            <a href="/">Home</a>
-            <a href="/about">About</a>
-            <a href="/contact">Contact</a>
-          </nav>
-        </header>
-      )}
+      </div>
       <div className="container">
         {children}
       </div>
