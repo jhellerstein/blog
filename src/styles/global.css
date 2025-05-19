@@ -73,6 +73,14 @@ main {
   height: fit-content;
 }
 
+.comments-wrapper {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  margin-top: 2rem;
+}
+
 /* =========================
    Header & Navigation
    ========================= */
