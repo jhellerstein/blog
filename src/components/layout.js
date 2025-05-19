@@ -1,5 +1,6 @@
 import React from "react";
 import { useLocation } from "@reach/router";
+import { Link } from "gatsby";
 import asyncStreamBanner from "../images/async-stream.png";
 import "../styles/global.css";
 
@@ -18,7 +19,9 @@ const Layout = ({ children }) => {
           />
           <div className="banner-overlay">
             <div className="banner-header">
-              <div className="site-title">Async Stream</div>
+              <div className="site-title">
+                <Link to="/">Async Stream</Link>
+              </div>
               <nav className="site-nav">
                 <a href="/">Home</a>
                 <a href="/about">About</a>
@@ -32,7 +35,9 @@ const Layout = ({ children }) => {
         </div>
       ) : (
         <header className="site-header">
-          <div className="site-title">Async Stream</div>
+          <div className="site-title">
+            <Link to="/">Async Stream</Link>
+          </div>
           <nav className="site-nav">
             <a href="/">Home</a>
             <a href="/about">About</a>
