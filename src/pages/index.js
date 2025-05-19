@@ -5,35 +5,15 @@ import Layout from "../components/layout"
 import Seo from "../components/seo"
 import PostPreview from "../components/PostPreview"
 import Hero from "../components/hero"
+import asyncStreamBanner from "../images/async-stream.png"
 
 const BlogIndex = ({ data, location }) => {
   const siteTitle = data.site.siteMetadata?.title || `Title`
   const posts = data.allMarkdownRemark.nodes
 
-  console.log("POSTS DATA:", posts);
-
-  posts.forEach(post => {
-    if (!post.frontmatter.coverImage) {
-      console.warn("Missing coverImage for post:", post.frontmatter.title);
-    }
-  });
-
-  posts.forEach(post => {
-    if (
-      post.frontmatter.coverImage &&
-      !post.frontmatter.coverImage.childImageSharp
-    ) {
-      console.warn(
-        "coverImage exists but childImageSharp is missing for post:",
-        post.frontmatter.title,
-        post.frontmatter.coverImage
-      );
-    }
-  });
-
   if (posts.length === 0) {
     return (
-      <Layout location={location} title={siteTitle} hero={<Hero />}>
+      <Layout location={location} title={siteTitle}>
         <Seo title="All posts" />
         <div className="home-grid">
           <aside className="sidebar">
@@ -52,7 +32,7 @@ const BlogIndex = ({ data, location }) => {
   }
 
   return (
-    <Layout location={location} title={siteTitle} hero={<Hero />}>
+    <Layout location={location} title={siteTitle}>
       <Seo title="All posts" />
       <div className="home-grid">
         <main>

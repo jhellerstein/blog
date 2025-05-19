@@ -1,25 +1,53 @@
-import React from "react"
-import "../styles/global.css"
+import React from "react";
+import { useLocation } from "@reach/router";
+import asyncStreamBanner from "../images/async-stream.png";
+import "../styles/global.css";
 
-const Layout = ({ children, hero }) => (
-  <>
-    <header className="site-header">
-      <div className="site-title">Async Stream</div>
-      <nav className="site-nav">
-        <a href="/">Home</a>
-        <a href="/about">About</a>
-        <a href="/contact">Contact</a>
-      </nav>
-    </header>
-    {/* HERO OUTSIDE THE CONTAINER */}
-    {hero}
-    <div className="container">
-      {children}
-    </div>
-    <footer className="site-footer">
-      &copy; {new Date().getFullYear()} Async Stream. All rights reserved.
-    </footer>
-  </>
-)
+const Layout = ({ children }) => {
+  const location = typeof window !== "undefined" ? window.location.pathname : "";
+  const isHome = location === "/" || location === "/blog/" || location === "/blog";
 
-export default Layout
+  return (
+    <>
+      {isHome ? (
+        <div className="banner-hero">
+          <img
+            src={asyncStreamBanner}
+            alt="Async Stream Banner"
+            className="site-banner"
+          />
+          <div className="banner-overlay">
+            <div className="banner-header">
+              <div className="site-title">Async Stream</div>
+              <nav className="site-nav">
+                <a href="/">Home</a>
+                <a href="/about">About</a>
+                <a href="/contact">Contact</a>
+              </nav>
+            </div>
+            <div className="banner-tagline">
+              Occasional thoughts on coding, computing and data.
+            </div>
+          </div>
+        </div>
+      ) : (
+        <header className="site-header">
+          <div className="site-title">Async Stream</div>
+          <nav className="site-nav">
+            <a href="/">Home</a>
+            <a href="/about">About</a>
+            <a href="/contact">Contact</a>
+          </nav>
+        </header>
+      )}
+      <div className="container">
+        {children}
+      </div>
+      <footer className="site-footer">
+        &copy; {new Date().getFullYear()} Async Stream. All rights reserved.
+      </footer>
+    </>
+  );
+};
+
+export default Layout;

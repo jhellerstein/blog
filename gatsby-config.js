@@ -19,7 +19,7 @@ module.exports = {
     },
     author: {
       name: `Joe Hellerstein`,
-      summary: `CS Prof at Berkeley. Hydro-ologist.`,
+      summary: `CS Prof at Berkeley.<br />Hydro-ologist.`,
     },
     siteUrl: `https://jhellerstein.github.io/blog`,
     social: {
@@ -138,5 +138,19 @@ module.exports = {
         icon: `static/img/favicon.png`, // This path is relative to the root of the site.
       },
     },
+    {
+      resolve: `gatsby-plugin-webfonts`,
+      options: {
+        fonts: {
+          google: [
+            {
+              family: "Oswald",
+              variants: ["700"],
+              strategy: "selfHosted"  // This caches the font locally
+            }
+          ]
+        }
+      }
+    }
   ],
 }

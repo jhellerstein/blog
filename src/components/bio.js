@@ -45,7 +45,11 @@ const Bio = () => {
         alt={author.name}
       />
       <h2>{author.name}</h2>
-      <p>{author.summary}</p>
+      <div
+        className="author-summary"
+        dangerouslySetInnerHTML={{ __html: author.summary }}
+      />
+      <br />
       <p>{description}</p>
       <div className="social-links">
         <a href={`https://github.com/${social.github}`} title="GitHub">
