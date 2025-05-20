@@ -27,11 +27,11 @@ const Layout = ({ children }) => {
               <Link to="/contact">Contact</Link>
             </nav>
           </div>
-          {isHome && (
+          {/* {isHome && (
             <div className="banner-tagline">
               Occasional thoughts on coding, computing and data.
             </div>
-          )}
+          )} */}
         </div>
       </div>
       <div className="container">
