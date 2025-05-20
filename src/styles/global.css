@@ -394,16 +394,28 @@ social-links a:hover {
 .banner-hero {
   position: relative;
   width: 100%;
-  height: 165px;
+  max-width: 2400px;
+  margin: 0 auto;
+  height: 120px;
   margin-bottom: 2rem;
   overflow: hidden;
+  display: flex;
+  justify-content: center;
+}
+
+.banner-hero > a {
+  display: flex;          /* Changed from block */
+  justify-content: center; /* Add this */
+  width: 100%;
+  height: 100%;
 }
 
 .site-banner {
-  width: 100%;
-  height: 165px; /* Match the .banner-hero height */
-  object-fit: contain; /* Ensures the whole SVG is visible */
   display: block;
+  height: 120px;
+  width: 2400px;         /* Set explicit width */
+  max-width: 100%;       /* Ensure responsiveness */
+  object-fit: contain;   /* Preserve aspect ratio */
   border-radius: 0 0 16px 16px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.08);
 }
