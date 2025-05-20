@@ -11,7 +11,7 @@ const Layout = ({ children }) => {
       <div className="banner-hero">
         <Link to="/">
         <img
-          src="/img/async-banner.svg"
+          src="img/async-banner.svg"
           alt="Async Stream Banner"
           className="site-banner"
         />
