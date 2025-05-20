@@ -394,28 +394,28 @@ social-links a:hover {
 .banner-hero {
   position: relative;
   width: 100%;
-  max-width: 2400px;
-  margin: 0 auto;
   height: 120px;
   margin-bottom: 2rem;
   overflow: hidden;
   display: flex;
   justify-content: center;
+  align-items: center;
+  background-color: #f6f8fb;
 }
 
 .banner-hero > a {
-  display: flex;          /* Changed from block */
-  justify-content: center; /* Add this */
-  width: 100%;
+  display: block;
+  width: 2400px;  /* Match SVG width */
+  max-width: 100%;
   height: 100%;
 }
 
 .site-banner {
   display: block;
-  height: 120px;
-  width: 2400px;         /* Set explicit width */
-  max-width: 100%;       /* Ensure responsiveness */
-  object-fit: contain;   /* Preserve aspect ratio */
+  width: 100%;    /* Fill the anchor tag width */
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
   border-radius: 0 0 16px 16px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.08);
 }
