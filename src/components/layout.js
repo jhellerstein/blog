@@ -1,7 +1,5 @@
 import React from "react";
-import { useLocation } from "@reach/router";
 import { Link } from "gatsby";
-import asyncStreamBanner from "../images/async-stream.png";
 import "../styles/global.css";
 
 const Layout = ({ children }) => {
@@ -11,16 +9,18 @@ const Layout = ({ children }) => {
   return (
     <>
       <div className="banner-hero">
+        <Link to="/">
         <img
-          src={asyncStreamBanner}
+          src="/img/async-banner.svg"
           alt="Async Stream Banner"
           className="site-banner"
         />
+        </Link>
         <div className="banner-overlay">
           <div className="banner-header">
-            <div className="site-title">
+            {/* <div className="site-title">
               <Link to="/">Async Stream</Link>
-            </div>
+            </div> */}
             <nav className="site-nav">
               <Link to="/">Home</Link>
               <Link to="/about">About</Link>

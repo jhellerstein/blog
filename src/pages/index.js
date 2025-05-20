@@ -1,35 +1,14 @@
 import * as React from "react"
-import { Link, graphql } from "gatsby"
+import { graphql } from "gatsby"  // Remove unused Link import
 import Bio from "../components/bio"
 import Layout from "../components/layout"
 import Seo from "../components/seo"
 import PostPreview from "../components/PostPreview"
-import Hero from "../components/hero"
-import asyncStreamBanner from "../images/async-stream.png"
+// Remove unused Hero and asyncStreamBanner imports
 
 const BlogIndex = ({ data, location }) => {
   const siteTitle = data.site.siteMetadata?.title || `Title`
   const posts = data.allMarkdownRemark.nodes
-
-  if (posts.length === 0) {
-    return (
-      <Layout location={location} title={siteTitle}>
-        <Seo title="All posts" />
-        <div className="home-grid">
-          <aside className="sidebar">
-            <Bio />
-          </aside>
-          <main>
-            <p>
-              No blog posts found. Add markdown posts to "content/blog" (or the
-              directory you specified for the "gatsby-source-filesystem" plugin in
-              gatsby-config.js).
-            </p>
-          </main>
-        </div>
-      </Layout>
-    )
-  }
 
   return (
     <Layout location={location} title={siteTitle}>
@@ -38,7 +17,10 @@ const BlogIndex = ({ data, location }) => {
         <main>
           <ol className="post-list" style={{ listStyle: `none` }}>
             {posts.map(post => (
-              <PostPreview key={post.id} post={post} />
+              <PostPreview 
+                key={post.fields.slug}  // Add key prop here
+                post={post} 
+              />
             ))}
           </ol>
         </main>
