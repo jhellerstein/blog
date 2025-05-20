@@ -147,6 +147,13 @@ main {
   width: 100%;
 }
 
+/* Adjust nav text size for mobile */
+@media (max-width: 768px) {
+  .site-nav a {
+    font-size: 0.85rem;  /* Slightly smaller nav text on mobile */
+  }
+}
+
 /* =========================
    Hero Section
    ========================= */
@@ -405,16 +412,17 @@ social-links a:hover {
 
 .banner-hero > a {
   display: block;
-  width: 2400px;  /* Match SVG width */
+  width: 2400px;
+  min-width: 960px;  /* Minimum width even on mobile */
   max-width: 100%;
   height: 100%;
 }
 
 .site-banner {
   display: block;
-  width: 100%;    /* Fill the anchor tag width */
+  width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;      /* Changed from contain to cover */
   object-position: center;
   border-radius: 0 0 16px 16px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.08);
