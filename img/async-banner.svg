@@ -1,0 +1,325 @@
+<svg viewBox="0 0 1200 300" xmlns="http://www.w3.org/2000/svg">
+  <!-- Definitions -->
+  <defs>
+    <!-- Background gradient -->
+    <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f5f7fa" />
+      <stop offset="100%" stop-color="#edf2f7" />
+    </linearGradient>
+    
+    <!-- Grid pattern for background texture -->
+    <pattern id="grid-pattern" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#d6dce5" stroke-width="0.5"/>
+    </pattern>
+    
+    <!-- Flow pattern -->
+    <pattern id="flow-pattern" x="0" y="0" width="300" height="300" patternUnits="userSpaceOnUse">
+      <!-- Top section waves -->
+      <path d="M0,50 C50,30 50,70 100,50 S150,30 200,50 S250,70 300,50" fill="none" stroke="#3b82f6" stroke-width="2" opacity="0.25">
+        <animate attributeName="d" 
+                 values="M0,50 C50,30 50,70 100,50 S150,30 200,50 S250,70 300,50;
+                         M0,50 C50,70 50,30 100,50 S150,70 200,50 S250,30 300,50;
+                         M0,50 C50,30 50,70 100,50 S150,30 200,50 S250,70 300,50" 
+                 dur="12s" 
+                 repeatCount="indefinite" />
+      </path>
+      
+      <path d="M0,75 C50,55 50,95 100,75 S150,55 200,75 S250,95 300,75" fill="none" stroke="#3b82f6" stroke-width="2" opacity="0.2">
+        <animate attributeName="d" 
+                 values="M0,75 C50,55 50,95 100,75 S150,55 200,75 S250,95 300,75;
+                         M0,75 C50,95 50,55 100,75 S150,95 200,75 S250,55 300,75;
+                         M0,75 C50,55 50,95 100,75 S150,55 200,75 S250,95 300,75" 
+                 dur="18s" 
+                 repeatCount="indefinite" />
+      </path>
+      
+      <!-- Middle section waves -->
+      <path d="M0,100 C50,80 50,120 100,100 S150,80 200,100 S250,120 300,100" fill="none" stroke="#3b82f6" stroke-width="3" opacity="0.3">
+        <animate attributeName="d" 
+                 values="M0,100 C50,80 50,120 100,100 S150,80 200,100 S250,120 300,100;
+                         M0,100 C50,120 50,80 100,100 S150,120 200,100 S250,80 300,100;
+                         M0,100 C50,80 50,120 100,100 S150,80 200,100 S250,120 300,100" 
+                 dur="10s" 
+                 repeatCount="indefinite" />
+      </path>
+      
+      <path d="M0,125 C50,105 50,145 100,125 S150,105 200,125 S250,145 300,125" fill="none" stroke="#3b82f6" stroke-width="2" opacity="0.2">
+        <animate attributeName="d" 
+                 values="M0,125 C50,105 50,145 100,125 S150,105 200,125 S250,145 300,125;
+                         M0,125 C50,145 50,105 100,125 S150,145 200,125 S250,105 300,125;
+                         M0,125 C50,105 50,145 100,125 S150,105 200,125 S250,145 300,125" 
+                 dur="16s" 
+                 repeatCount="indefinite" />
+      </path>
+      
+      <path d="M0,150 C50,130 50,170 100,150 S150,130 200,150 S250,170 300,150" fill="none" stroke="#3b82f6" stroke-width="3" opacity="0.25">
+        <animate attributeName="d" 
+                 values="M0,150 C50,130 50,170 100,150 S150,130 200,150 S250,170 300,150;
+                         M0,150 C50,170 50,130 100,150 S150,170 200,150 S250,130 300,150;
+                         M0,150 C50,130 50,170 100,150 S150,130 200,150 S250,170 300,150" 
+                 dur="15s" 
+                 repeatCount="indefinite" />
+      </path>
+      
+      <path d="M0,175 C50,155 50,195 100,175 S150,155 200,175 S250,195 300,175" fill="none" stroke="#3b82f6" stroke-width="2" opacity="0.2">
+        <animate attributeName="d" 
+                 values="M0,175 C50,155 50,195 100,175 S150,155 200,175 S250,195 300,175;
+                         M0,175 C50,195 50,155 100,175 S150,195 200,175 S250,155 300,175;
+                         M0,175 C50,155 50,195 100,175 S150,155 200,175 S250,195 300,175" 
+                 dur="14s" 
+                 repeatCount="indefinite" />
+      </path>
+      
+      <!-- Bottom section waves -->
+      <path d="M0,200 C50,180 50,220 100,200 S150,180 200,200 S250,220 300,200" fill="none" stroke="#3b82f6" stroke-width="3" opacity="0.2">
+        <animate attributeName="d" 
+                 values="M0,200 C50,180 50,220 100,200 S150,180 200,200 S250,220 300,200;
+                         M0,200 C50,220 50,180 100,200 S150,220 200,200 S250,180 300,200;
+                         M0,200 C50,180 50,220 100,200 S150,180 200,200 S250,220 300,200" 
+                 dur="20s" 
+                 repeatCount="indefinite" />
+      </path>
+      
+      <path d="M0,225 C50,205 50,245 100,225 S150,205 200,225 S250,245 300,225" fill="none" stroke="#3b82f6" stroke-width="2" opacity="0.2">
+        <animate attributeName="d" 
+                 values="M0,225 C50,205 50,245 100,225 S150,205 200,225 S250,245 300,225;
+                         M0,225 C50,245 50,205 100,225 S150,245 200,225 S250,205 300,225;
+                         M0,225 C50,205 50,245 100,225 S150,205 200,225 S250,245 300,225" 
+                 dur="17s" 
+                 repeatCount="indefinite" />
+      </path>
+      
+      <path d="M0,250 C50,230 50,270 100,250 S150,230 200,250 S250,270 300,250" fill="none" stroke="#3b82f6" stroke-width="2" opacity="0.15">
+        <animate attributeName="d" 
+                 values="M0,250 C50,230 50,270 100,250 S150,230 200,250 S250,270 300,250;
+                         M0,250 C50,270 50,230 100,250 S150,270 200,250 S250,230 300,250;
+                         M0,250 C50,230 50,270 100,250 S150,230 200,250 S250,270 300,250" 
+                 dur="19s" 
+                 repeatCount="indefinite" />
+      </path>
+    </pattern>
+  </defs>
+  
+  <!-- Main background with gradient and grid -->
+  <rect width="100%" height="100%" fill="url(#bg-gradient)" />
+  <rect width="100%" height="100%" fill="url(#grid-pattern)" />
+  
+  <!-- Flow pattern background -->
+  <rect width="100%" height="100%" fill="url(#flow-pattern)" />
+  
+  <!-- Nodes and connections representing distributed systems -->
+  <g>
+    <!-- Node 1 -->
+    <circle cx="200" cy="150" r="25" fill="#2563eb" opacity="0.8" />
+    <circle cx="200" cy="150" r="30" fill="none" stroke="#2563eb" stroke-width="2" opacity="0.5">
+      <animate attributeName="r" values="30;35;30" dur="3s" repeatCount="indefinite" />
+    </circle>
+    
+    <!-- Node 2 -->
+    <circle cx="500" cy="100" r="20" fill="#2563eb" opacity="0.8" />
+    <circle cx="500" cy="100" r="25" fill="none" stroke="#2563eb" stroke-width="2" opacity="0.5">
+      <animate attributeName="r" values="25;30;25" dur="4s" repeatCount="indefinite" />
+    </circle>
+    
+    <!-- Node 3 -->
+    <circle cx="800" cy="180" r="22" fill="#2563eb" opacity="0.8" />
+    <circle cx="800" cy="180" r="27" fill="none" stroke="#2563eb" stroke-width="2" opacity="0.5">
+      <animate attributeName="r" values="27;32;27" dur="5s" repeatCount="indefinite" />
+    </circle>
+    
+    <!-- Node 4 -->
+    <circle cx="1000" cy="120" r="18" fill="#2563eb" opacity="0.8" />
+    <circle cx="1000" cy="120" r="23" fill="none" stroke="#2563eb" stroke-width="2" opacity="0.5">
+      <animate attributeName="r" values="23;28;23" dur="6s" repeatCount="indefinite" />
+    </circle>
+    
+    <!-- Connection lines with animated data flow -->
+    <path id="path1" d="M200,150 L500,100" stroke="#0f4c8a" stroke-width="3" stroke-dasharray="10,5" opacity="0.7">
+      <animate attributeName="stroke-dashoffset" values="0;-30" dur="2s" repeatCount="indefinite" />
+    </path>
+    
+    <path id="path2" d="M500,100 L800,180" stroke="#0f4c8a" stroke-width="3" stroke-dasharray="10,5" opacity="0.7">
+      <animate attributeName="stroke-dashoffset" values="0;-30" dur="2.5s" repeatCount="indefinite" />
+    </path>
+    
+    <path id="path3" d="M800,180 L1000,120" stroke="#0f4c8a" stroke-width="3" stroke-dasharray="10,5" opacity="0.7">
+      <animate attributeName="stroke-dashoffset" values="0;-30" dur="3s" repeatCount="indefinite" />
+    </path>
+    
+    <!-- Data packets for connection lines -->
+    <circle cx="200" cy="150" r="5" fill="#f97316">
+      <animate attributeName="cx" values="200;500" dur="2s" repeatCount="indefinite" />
+      <animate attributeName="cy" values="150;100" dur="2s" repeatCount="indefinite" />
+    </circle>
+    
+    <circle cx="500" cy="100" r="5" fill="#f97316">
+      <animate attributeName="cx" values="500;800" dur="2.5s" repeatCount="indefinite" />
+      <animate attributeName="cy" values="100;180" dur="2.5s" repeatCount="indefinite" />
+    </circle>
+    
+    <circle cx="800" cy="180" r="5" fill="#f97316">
+      <animate attributeName="cx" values="800;1000" dur="3s" repeatCount="indefinite" />
+      <animate attributeName="cy" values="180;120" dur="3s" repeatCount="indefinite" />
+    </circle>
+  </g>
+  
+  <!-- Text elements -->
+  <g>
+    <!-- Main title with code-like styling - centered between braces -->
+    <text x="605" y="160" font-family="'Monaco', monospace" font-size="54" font-weight="bold" text-anchor="middle" fill="#a16003">
+      async stream
+    </text>
+    
+    <!-- Code brackets for additional tech feel - repositioned for proper centering -->
+    <text x="315" y="160" font-family="'Courier New', monospace" font-size="64" font-weight="bold" fill="#2563eb">
+      {
+    </text>
+    <text x="855" y="160" font-family="'Courier New', monospace" font-size="64" font-weight="bold" fill="#2563eb">
+      }
+    </text>
+    
+    <!-- Subtle tagline -->
+    <text x="600" y="240" font-family="Arial, sans-serif" font-size="18" font-style="italic" text-anchor="middle" fill="#64748b">
+      distributed systems · asynchronous data · stream of consciousness
+    </text>
+  </g>
+  
+  <!-- Animated dots representing occasional blog posts that follow the wave paths -->
+  <g>
+    <!-- Dots along all wave paths -->
+    <circle r="4" fill="#fb923c" opacity="0.8">
+      <animate attributeName="opacity" values="0;0.8;0" dur="28s" begin="1s" repeatCount="indefinite" />
+      <animateMotion dur="28s" begin="1s" repeatCount="indefinite">
+        <mpath href="#path-wave1"/>
+      </animateMotion>
+    </circle>
+    
+    <circle r="4" fill="#fb923c" opacity="0.8">
+      <animate attributeName="opacity" values="0;0.8;0" dur="32s" begin="3s" repeatCount="indefinite" />
+      <animateMotion dur="32s" begin="3s" repeatCount="indefinite">
+        <mpath href="#path-wave2"/>
+      </animateMotion>
+    </circle>
+    
+    <circle r="4" fill="#fb923c" opacity="0.8">
+      <animate attributeName="opacity" values="0;0.8;0" dur="24s" begin="5s" repeatCount="indefinite" />
+      <animateMotion dur="24s" begin="5s" repeatCount="indefinite">
+        <mpath href="#path-wave3"/>
+      </animateMotion>
+    </circle>
+    
+    <circle r="4" fill="#fb923c" opacity="0.8">
+      <animate attributeName="opacity" values="0;0.8;0" dur="33s" begin="2s" repeatCount="indefinite" />
+      <animateMotion dur="33s" begin="2s" repeatCount="indefinite">
+        <mpath href="#path-wave4"/>
+      </animateMotion>
+    </circle>
+    
+    <circle r="4" fill="#fb923c" opacity="0.8">
+      <animate attributeName="opacity" values="0;0.8;0" dur="25s" begin="0s" repeatCount="indefinite" />
+      <animateMotion dur="25s" begin="0s" repeatCount="indefinite">
+        <mpath href="#path-wave5"/>
+      </animateMotion>
+    </circle>
+    
+    <circle r="4" fill="#fb923c" opacity="0.8">
+      <animate attributeName="opacity" values="0;0.8;0" dur="19s" begin="7s" repeatCount="indefinite" />
+      <animateMotion dur="19s" begin="7s" repeatCount="indefinite">
+        <mpath href="#path-wave6"/>
+      </animateMotion>
+    </circle>
+    
+    <circle r="4" fill="#fb923c" opacity="0.8">
+      <animate attributeName="opacity" values="0;0.8;0" dur="31s" begin="4s" repeatCount="indefinite" />
+      <animateMotion dur="31s" begin="4s" repeatCount="indefinite">
+        <mpath href="#path-wave7"/>
+      </animateMotion>
+    </circle>
+    
+    <circle r="4" fill="#fb923c" opacity="0.8">
+      <animate attributeName="opacity" values="0;0.8;0" dur="24s" begin="2s" repeatCount="indefinite" />
+      <animateMotion dur="24s" begin="2s" repeatCount="indefinite">
+        <mpath href="#path-wave8"/>
+      </animateMotion>
+    </circle>
+    
+    <circle r="4" fill="#fb923c" opacity="0.8">
+      <animate attributeName="opacity" values="0;0.8;0" dur="27s" begin="6s" repeatCount="indefinite" />
+      <animateMotion dur="27s" begin="6s" repeatCount="indefinite">
+        <mpath href="#path-wave9"/>
+      </animateMotion>
+    </circle>
+    
+    <!-- Additional dots for more coverage -->
+    <circle r="4" fill="#fb923c" opacity="0.8">
+      <animate attributeName="opacity" values="0;0.8;0" dur="16s" begin="8s" repeatCount="indefinite" />
+      <animateMotion dur="16s" begin="8s" repeatCount="indefinite">
+        <mpath href="#path-wave1"/>
+      </animateMotion>
+    </circle>
+    
+    <circle r="4" fill="#fb923c" opacity="0.8">
+      <animate attributeName="opacity" values="0;0.8;0" dur="18s" begin="9s" repeatCount="indefinite" />
+      <animateMotion dur="18s" begin="9s" repeatCount="indefinite">
+        <mpath href="#path-wave3"/>
+      </animateMotion>
+    </circle>
+    
+    <circle r="4" fill="#fb923c" opacity="0.8">
+      <animate attributeName="opacity" values="0;0.8;0" dur="20s" begin="5s" repeatCount="indefinite" />
+      <animateMotion dur="20s" begin="5s" repeatCount="indefinite">
+        <mpath href="#path-wave5"/>
+      </animateMotion>
+    </circle>
+    
+    <circle r="4" fill="#fb923c" opacity="0.8">
+      <animate attributeName="opacity" values="0;0.8;0" dur="19s" begin="4s" repeatCount="indefinite" />
+      <animateMotion dur="19s" begin="4s" repeatCount="indefinite">
+        <mpath href="#path-wave7"/>
+      </animateMotion>
+    </circle>
+    
+    <!-- Dots along the connection paths -->
+    <circle r="4" fill="#fb923c" opacity="0.8">
+      <animate attributeName="opacity" values="0;0.8;0" dur="7s" begin="4s" repeatCount="indefinite" />
+      <animateMotion path="M200,150 L500,100" dur="7s" begin="4s" repeatCount="indefinite" />
+    </circle>
+    
+    <circle r="4" fill="#fb923c" opacity="0.8">
+      <animate attributeName="opacity" values="0;0.8;0" dur="11s" begin="6s" repeatCount="indefinite" />
+      <animateMotion path="M500,100 L800,180" dur="11s" begin="6s" repeatCount="indefinite" />
+    </circle>
+    
+    <circle r="4" fill="#fb923c" opacity="0.8">
+      <animate attributeName="opacity" values="0;0.8;0" dur="9s" begin="2s" repeatCount="indefinite" />
+      <animateMotion path="M800,180 L1000,120" dur="9s" begin="2s" repeatCount="indefinite" />
+    </circle>
+    
+    <!-- Additional connection path dots -->
+    <circle r="4" fill="#fb923c" opacity="0.8">
+      <animate attributeName="opacity" values="0;0.8;0" dur="8s" begin="1s" repeatCount="indefinite" />
+      <animateMotion path="M200,150 L500,100" dur="8s" begin="1s" repeatCount="indefinite" />
+    </circle>
+    
+    <circle r="4" fill="#fb923c" opacity="0.8">
+      <animate attributeName="opacity" values="0;0.8;0" dur="10s" begin="3s" repeatCount="indefinite" />
+      <animateMotion path="M500,100 L800,180" dur="10s" begin="3s" repeatCount="indefinite" />
+    </circle>
+    
+    <circle r="4" fill="#fb923c" opacity="0.8">
+      <animate attributeName="opacity" values="0;0.8;0" dur="12s" begin="5s" repeatCount="indefinite" />
+      <animateMotion path="M800,180 L1000,120" dur="12s" begin="5s" repeatCount="indefinite" />
+    </circle>
+  </g>
+  
+  <!-- Paths for the wave animation references -->
+  <path id="path-wave1" d="M0,50 C50,30 50,70 100,50 S150,30 200,50 S250,70 300,50" fill="none" stroke="none" />
+  <path id="path-wave2" d="M0,75 C50,55 50,95 100,75 S150,55 200,75 S250,95 300,75" fill="none" stroke="none" />
+  <path id="path-wave3" d="M0,100 C50,80 50,120 100,100 S150,80 200,100 S250,120 300,100" fill="none" stroke="none" />
+  <path id="path-wave4" d="M0,125 C50,105 50,145 100,125 S150,105 200,125 S250,145 300,125" fill="none" stroke="none" />
+  <path id="path-wave5" d="M0,150 C50,130 50,170 100,150 S150,130 200,150 S250,170 300,150" fill="none" stroke="none" />
+  <path id="path-wave6" d="M0,175 C50,155 50,195 100,175 S150,155 200,175 S250,195 300,175" fill="none" stroke="none" />
+  <path id="path-wave7" d="M0,200 C50,180 50,220 100,200 S150,180 200,200 S250,220 300,200" fill="none" stroke="none" />
+  <path id="path-wave8" d="M0,225 C50,205 50,245 100,225 S150,205 200,225 S250,245 300,225" fill="none" stroke="none" />
+  <path id="path-wave9" d="M0,250 C50,230 50,270 100,250 S150,230 200,250 S250,270 300,250" fill="none" stroke="none" />
+</svg>
