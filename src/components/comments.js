@@ -6,9 +6,9 @@ const Comments = () => {
     <div className="comments-wrapper">
       <Giscus
         repo="jhellerstein/blog"
-        repoId="R_kgDOLRMqmw"
+        repoId="R_kgDOOlLShQ"
         category="Comments"
-        categoryId="DIC_kwDOLRMqm84CdYYr"
+        categoryId="DIC_kwDOOlLShc4CqUp7"
         mapping="pathname"
         term="Welcome to the async stream blog."
         strict="0"
