@@ -31,7 +31,7 @@ const Layout = ({ children }) => {
         {children}
       </div>
       <footer className="site-footer">
-        &copy; {new Date().getFullYear()} Async Stream. All rights reserved.
+        &copy; {new Date().getFullYear()} Joseph M. Hellerstein. All rights reserved.
       </footer>
     </>
   );
