@@ -151,6 +151,16 @@ module.exports = {
           ]
         }
       }
+    },
+    {
+      resolve: `gatsby-plugin-google-fonts`,
+      options: {
+        fonts: [
+          `inter:400,500,600`,
+          `space grotesk:400,500,600`
+        ],
+        display: 'swap'
+      }
     }
   ],
 }
