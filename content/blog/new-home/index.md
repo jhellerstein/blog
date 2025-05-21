@@ -4,7 +4,7 @@ date: 2025-04-27
 coverImage: ./context-new-home.png
 ---
 
-Time to get blogging again. After a long run with [DataBeta](https://databeta.wordpress.com/), it's nice to have a fresh start. WordPress was feeling clunky, and over time the title took on unintended connotations. So I’m starting over—lighter, cleaner, and more grounded here on GitHub Pages.  
+Time to get blogging again. After a long run with [Data in Beta](https://databeta.wordpress.com/), it's nice to have a fresh start. WordPress was feeling clunky, and over time the title took on unintended connotations. So I’m starting over—lighter, cleaner, and more grounded here on GitHub Pages.  
 
 The ideas won’t be any more “finished” than before, but it feels like a good time to shed some baggage and keep moving.  
 
