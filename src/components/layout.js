@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "gatsby";
+import { withPrefix } from "gatsby";  // Add this import
 import "../styles/global.css";
 
 const Layout = ({ children }) => {
@@ -11,7 +12,7 @@ const Layout = ({ children }) => {
       <div className="banner-hero">
         <Link to="/">
           <img
-            src="/img/async-banner.svg" // Fixed path
+            src={withPrefix("img/async-banner.svg")}  // Use withPrefix
             alt="Async Stream Banner"
             className="site-banner"
           />
