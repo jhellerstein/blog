@@ -10,7 +10,7 @@ const ContactPage = () => {
         <h1>Contact</h1>
         <p>
           The best way to reach me is through email at lastname@berkeley.edu.
-          You can also find me on <a href="https://github.com/hellerstein">GitHub</a>.
+          You can also find me on <a href="https://github.com/jhellerstein">GitHub</a>.
         </p>
       </div>
     </Layout>

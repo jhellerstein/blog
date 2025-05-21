@@ -4,7 +4,6 @@ import Bio from "../components/bio"
 import Layout from "../components/layout"
 import Seo from "../components/seo"
 import PostPreview from "../components/PostPreview"
-// Remove unused Hero and asyncStreamBanner imports
 
 const BlogIndex = ({ data, location }) => {
   const siteTitle = data.site.siteMetadata?.title || `Title`
