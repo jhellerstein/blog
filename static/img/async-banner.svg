@@ -26,9 +26,10 @@
 	.st20{fill:#64748B;}
 	.st21{font-family:'Arial-ItalicMT';}
 	.st22{font-size:24px;}
-	.st23{opacity:0.6;fill:#9a8a7c;enable-background:new    ;}
 </style>
-<pattern  x="600" y="304" width="300" height="300" patternUnits="userSpaceOnUse" id="flow-pattern" viewBox="0.6 -300 300 300" style="overflow:visible;">
+<pattern x="600" y="104" width="300" height="300" patternUnits="userSpaceOnUse" 
+         id="flow-pattern" viewBox="0 0 300 300" style="overflow:visible;">
+
 	<g>
 		<rect x="0.6" y="-300" class="st0" width="300" height="300"/>
 		<path class="st1" d="M0.6-50c50,20,50-20,100,0s50,20,100,0s50-20,100,0		">
@@ -178,174 +179,7 @@
 	<text transform="matrix(1 0 0 1 1010.5684 164)" class="st15 st16 st17">async stream</text>
 	<text transform="matrix(1 0 0 1 915 164)" class="st18 st16 st19">{</text>
 	<text transform="matrix(1 0 0 1 1455 164)" class="st18 st16 st19">}</text>
-	<text transform="matrix(1 0 0 1 850 250)" class="st20 st21 st22"><tspan font-family="Arial">asynchronous</tspan> data · distributed systems · <tspan font-family="Arial">stream</tspan> of consciousness</text>
-</g>
-<g>
-	<circle class="st23" cx="0" cy="4" r="4">
-	
-		<animate  accumulate="none" additive="replace" attributeName="opacity" begin="1s" calcMode="linear" dur="28s" fill="remove" repeatCount="indefinite" restart="always" values="0;0.8;0">
-		</animate>
-	
-		<animateMotion  accumulate="none" additive="replace" begin="1s" calcMode="paced" dur="28s" fill="remove" repeatCount="indefinite" restart="always">
-		<mpath  href="#path-wave1"></mpath>
-	</animateMotion>
-	</circle>
-	<circle class="st23" cx="0" cy="4" r="4">
-	
-		<animate  accumulate="none" additive="replace" attributeName="opacity" begin="3s" calcMode="linear" dur="32s" fill="remove" repeatCount="indefinite" restart="always" values="0;0.8;0">
-		</animate>
-	
-		<animateMotion  accumulate="none" additive="replace" begin="3s" calcMode="paced" dur="32s" fill="remove" repeatCount="indefinite" restart="always">
-		<mpath  href="#path-wave2"></mpath>
-	</animateMotion>
-	</circle>
-	<circle class="st23" cx="0" cy="4" r="4">
-	
-		<animate  accumulate="none" additive="replace" attributeName="opacity" begin="5s" calcMode="linear" dur="24s" fill="remove" repeatCount="indefinite" restart="always" values="0;0.8;0">
-		</animate>
-	
-		<animateMotion  accumulate="none" additive="replace" begin="5s" calcMode="paced" dur="24s" fill="remove" repeatCount="indefinite" restart="always">
-		<mpath  href="#path-wave3"></mpath>
-	</animateMotion>
-	</circle>
-	<circle class="st23" cx="0" cy="4" r="4">
-	
-		<animate  accumulate="none" additive="replace" attributeName="opacity" begin="2s" calcMode="linear" dur="33s" fill="remove" repeatCount="indefinite" restart="always" values="0;0.8;0">
-		</animate>
-	
-		<animateMotion  accumulate="none" additive="replace" begin="2s" calcMode="paced" dur="33s" fill="remove" repeatCount="indefinite" restart="always">
-		<mpath  href="#path-wave4"></mpath>
-	</animateMotion>
-	</circle>
-	<circle class="st23" cx="0" cy="4" r="4">
-	
-		<animate  accumulate="none" additive="replace" attributeName="opacity" begin="0s" calcMode="linear" dur="25s" fill="remove" repeatCount="indefinite" restart="always" values="0;0.8;0">
-		</animate>
-	
-		<animateMotion  accumulate="none" additive="replace" begin="0s" calcMode="paced" dur="25s" fill="remove" repeatCount="indefinite" restart="always">
-		<mpath  href="#path-wave5"></mpath>
-	</animateMotion>
-	</circle>
-	<circle class="st23" cx="0" cy="4" r="4">
-	
-		<animate  accumulate="none" additive="replace" attributeName="opacity" begin="7s" calcMode="linear" dur="19s" fill="remove" repeatCount="indefinite" restart="always" values="0;0.8;0">
-		</animate>
-	
-		<animateMotion  accumulate="none" additive="replace" begin="7s" calcMode="paced" dur="19s" fill="remove" repeatCount="indefinite" restart="always">
-		<mpath  href="#path-wave6"></mpath>
-	</animateMotion>
-	</circle>
-	<circle class="st23" cx="0" cy="4" r="4">
-	
-		<animate  accumulate="none" additive="replace" attributeName="opacity" begin="4s" calcMode="linear" dur="31s" fill="remove" repeatCount="indefinite" restart="always" values="0;0.8;0">
-		</animate>
-	
-		<animateMotion  accumulate="none" additive="replace" begin="4s" calcMode="paced" dur="31s" fill="remove" repeatCount="indefinite" restart="always">
-		<mpath  href="#path-wave7"></mpath>
-	</animateMotion>
-	</circle>
-	<circle class="st23" cx="0" cy="4" r="4">
-	
-		<animate  accumulate="none" additive="replace" attributeName="opacity" begin="2s" calcMode="linear" dur="24s" fill="remove" repeatCount="indefinite" restart="always" values="0;0.8;0">
-		</animate>
-	
-		<animateMotion  accumulate="none" additive="replace" begin="2s" calcMode="paced" dur="24s" fill="remove" repeatCount="indefinite" restart="always">
-		<mpath  href="#path-wave8"></mpath>
-	</animateMotion>
-	</circle>
-	<circle class="st23" cx="0" cy="4" r="4">
-	
-		<animate  accumulate="none" additive="replace" attributeName="opacity" begin="6s" calcMode="linear" dur="27s" fill="remove" repeatCount="indefinite" restart="always" values="0;0.8;0">
-		</animate>
-	
-		<animateMotion  accumulate="none" additive="replace" begin="6s" calcMode="paced" dur="27s" fill="remove" repeatCount="indefinite" restart="always">
-		<mpath  href="#path-wave9"></mpath>
-	</animateMotion>
-	</circle>
-	<circle class="st23" cx="0" cy="4" r="4">
-	
-		<animate  accumulate="none" additive="replace" attributeName="opacity" begin="8s" calcMode="linear" dur="16s" fill="remove" repeatCount="indefinite" restart="always" values="0;0.8;0">
-		</animate>
-	
-		<animateMotion  accumulate="none" additive="replace" begin="8s" calcMode="paced" dur="16s" fill="remove" repeatCount="indefinite" restart="always">
-		<mpath  href="#path-wave1"></mpath>
-	</animateMotion>
-	</circle>
-	<circle class="st23" cx="0" cy="4" r="4">
-	
-		<animate  accumulate="none" additive="replace" attributeName="opacity" begin="9s" calcMode="linear" dur="18s" fill="remove" repeatCount="indefinite" restart="always" values="0;0.8;0">
-		</animate>
-	
-		<animateMotion  accumulate="none" additive="replace" begin="9s" calcMode="paced" dur="18s" fill="remove" repeatCount="indefinite" restart="always">
-		<mpath  href="#path-wave3"></mpath>
-	</animateMotion>
-	</circle>
-	<circle class="st23" cx="0" cy="4" r="4">
-	
-		<animate  accumulate="none" additive="replace" attributeName="opacity" begin="5s" calcMode="linear" dur="20s" fill="remove" repeatCount="indefinite" restart="always" values="0;0.8;0">
-		</animate>
-	
-		<animateMotion  accumulate="none" additive="replace" begin="5s" calcMode="paced" dur="20s" fill="remove" repeatCount="indefinite" restart="always">
-		<mpath  href="#path-wave5"></mpath>
-	</animateMotion>
-	</circle>
-	<circle class="st23" cx="0" cy="4" r="4">
-	
-		<animate  accumulate="none" additive="replace" attributeName="opacity" begin="4s" calcMode="linear" dur="19s" fill="remove" repeatCount="indefinite" restart="always" values="0;0.8;0">
-		</animate>
-	
-		<animateMotion  accumulate="none" additive="replace" begin="4s" calcMode="paced" dur="19s" fill="remove" repeatCount="indefinite" restart="always">
-		<mpath  href="#path-wave7"></mpath>
-	</animateMotion>
-	</circle>
-	<circle class="st23" cx="0" cy="4" r="4">
-	
-		<animate  accumulate="none" additive="replace" attributeName="opacity" begin="4s" calcMode="linear" dur="7s" fill="remove" repeatCount="indefinite" restart="always" values="0;0.8;0">
-		</animate>
-	
-		<animateMotion  accumulate="none" additive="replace" begin="4s" calcMode="paced" dur="7s" fill="remove" path="M200,150 L500,100" repeatCount="indefinite" restart="always">
-		</animateMotion>
-	</circle>
-	<circle class="st23" cx="0" cy="4" r="4">
-	
-		<animate  accumulate="none" additive="replace" attributeName="opacity" begin="6s" calcMode="linear" dur="11s" fill="remove" repeatCount="indefinite" restart="always" values="0;0.8;0">
-		</animate>
-	
-		<animateMotion  accumulate="none" additive="replace" begin="6s" calcMode="paced" dur="11s" fill="remove" path="M500,100 L800,180" repeatCount="indefinite" restart="always">
-		</animateMotion>
-	</circle>
-	<circle class="st23" cx="0" cy="4" r="4">
-	
-		<animate  accumulate="none" additive="replace" attributeName="opacity" begin="2s" calcMode="linear" dur="9s" fill="remove" repeatCount="indefinite" restart="always" values="0;0.8;0">
-		</animate>
-	
-		<animateMotion  accumulate="none" additive="replace" begin="2s" calcMode="paced" dur="9s" fill="remove" path="M800,180 L1000,120" repeatCount="indefinite" restart="always">
-		</animateMotion>
-	</circle>
-	<circle class="st23" cx="0" cy="4" r="4">
-	
-		<animate  accumulate="none" additive="replace" attributeName="opacity" begin="1s" calcMode="linear" dur="8s" fill="remove" repeatCount="indefinite" restart="always" values="0;0.8;0">
-		</animate>
-	
-		<animateMotion  accumulate="none" additive="replace" begin="1s" calcMode="paced" dur="8s" fill="remove" path="M200,150 L500,100" repeatCount="indefinite" restart="always">
-		</animateMotion>
-	</circle>
-	<circle class="st23" cx="0" cy="4" r="4">
-	
-		<animate  accumulate="none" additive="replace" attributeName="opacity" begin="3s" calcMode="linear" dur="10s" fill="remove" repeatCount="indefinite" restart="always" values="0;0.8;0">
-		</animate>
-	
-		<animateMotion  accumulate="none" additive="replace" begin="3s" calcMode="paced" dur="10s" fill="remove" path="M500,100 L800,180" repeatCount="indefinite" restart="always">
-		</animateMotion>
-	</circle>
-	<circle class="st23" cx="0" cy="4" r="4">
-	
-		<animate  accumulate="none" additive="replace" attributeName="opacity" begin="5s" calcMode="linear" dur="12s" fill="remove" repeatCount="indefinite" restart="always" values="0;0.8;0">
-		</animate>
-	
-		<animateMotion  accumulate="none" additive="replace" begin="5s" calcMode="paced" dur="12s" fill="remove" path="M800,180 L1000,120" repeatCount="indefinite" restart="always">
-		</animateMotion>
-	</circle>
+	<text transform="matrix(1 0 0 1 850 235)" class="st20 st21 st22">asynchronous data · distributed systems · stream of consciousness</text>
 </g>
 <path id="path-wave1" class="st0" d="M0,54
   C300,34 300,74 600,54

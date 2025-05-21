@@ -1,7 +1,7 @@
 ---
 title: "Context for a New Home"
 date: 2025-04-27
-coverImage: ./toyjmh.png
+coverImage: ./context-new-home.png
 ---
 
 Time to get blogging again. After a long run with [DataBeta](https://databeta.wordpress.com/), it's nice to have a fresh start. WordPress was feeling clunky, and over time the title took on unintended connotations. So I’m starting over—lighter, cleaner, and more grounded here on GitHub Pages.  
