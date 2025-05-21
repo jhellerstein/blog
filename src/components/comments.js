@@ -10,12 +10,16 @@ const Comments = () => {
         category="Comments"
         categoryId="DIC_kwDOLRMqm84CdYYr"
         mapping="pathname"
+        term="Welcome to the async stream blog."
         strict="0"
         reactionsEnabled="1"
         emitMetadata="0"
         inputPosition="bottom"
         theme="light"
         lang="en"
+        loading="lazy"
+        crossOrigin="anonymous"
+        async
       />
     </div>
   )
