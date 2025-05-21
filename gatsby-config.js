@@ -19,7 +19,7 @@ module.exports = {
     },
     author: {
       name: `Joe Hellerstein`,
-      summary: `CS Prof at Berkeley.<br />Hydro-ologist.`,
+      summary: `CS Prof at Berkeley.<br /><a href="https://hydro.run">Hydro</a>-ologist.`,
     },
     siteUrl: `https://jhellerstein.github.io/blog`,
     social: {
