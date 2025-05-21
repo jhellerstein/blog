@@ -464,3 +464,15 @@ social-links a:hover {
   display: inline-block;  /* This is already set */
   width: fit-content;    /* Add this line */
 }
+
+/* =========================
+   Blockquote
+   ========================= */
+blockquote {
+  font-size: 0.9em; /* Adjust the size as needed */
+  font-style: italic;
+  color: #555; /* Optional: Change the color for better readability */
+  margin: 1em 0;
+  padding-left: 1em;
+  border-left: 4px solid #ccc; /* Optional: Add a left border for styling */
+}
