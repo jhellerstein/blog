@@ -57,7 +57,7 @@ Every well-designed CRDT is a **semilattice**.
 - ✅ A semilattice defines how information grows and `merge`s.
 - ✅ It provides convergence by construction, through clean algebra.
 
-In case you've read about a split between so-called "state-based" vs "op-based" CRDTs, you can ignore that for now; it's a turtlish distraction. Here’s what actually matters:
+In case you've read about a split between so-called "state-based" vs "op-based" CRDTs, you can ignore that for now; it's a turtlish distraction I will [fill in below](#op-based). Here’s what actually matters:
 
 > A semilattice is:
 > - A set of states $S$
@@ -173,6 +173,19 @@ To use our version vectors, we will make a few small changes to our OR-set desig
 2. When an item is deleted, its tombstone timestamp is set to the local vector clock.
 
 We can now do expiration safely: tombstones are only expired if their timestamp is lower in the partial order than the local *vector clock*: if so, we can be sure that *every other node will also delete this tombstone* if it hasn't already!
+
+## <a id="op-based"></a>A Note on Op-Based CRDTS
+The idea of an "op-based" CRDT is that the state shared by the CRDT is actually a partially-ordered log of commands to be played at each site. Each site totally orders its commands by tagging them with a local counter (clock) value that increments on each command or message handling event. This ensures that recipients of commands from node $n$ will play them in the same order that $n$ did.
+
+Commands *across* nodes are partially ordered, via causal metadata as described above. It is the responsibility of the CRDT designer to ensure that concurrent operations *across* nodes are commutative.
+
+From the CRDT's perspective, the state $S$ of an op-based CRDT is a compound lattice: a lexical pair `(causalContext, DAG-of-operations)`. (A DAG is itself a lattice -- for example, it can be modeled as a set lattice of edges, with `merge` being set-union.)
+
+Optionally, you can also "play" the log at each site (eagerly or lazily) to materialize the local state. This is effectively a "read" operation and is outside the scope of the CRDT math.
+
+To summarize: an op-based CRDT is still just a semilattice, all the way down! The only wrinkles are:
+1. Op-based CRDT state requires a causal "wrapper"
+2. For the ops to be useful at replay time, ops across sites should be commutative.
 
 ## 🪜 <a id="building-on-an-existing-turtle"></a>You Can Build on a Turtle — But Know What It Carries
 Sometimes, a system's lower layers provide additional guarantees that allow us to skip some details and rely on a turtle below us.
