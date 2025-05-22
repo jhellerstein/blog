@@ -492,12 +492,19 @@ social-links a:hover {
    Blockquote
    ========================= */
 blockquote {
-  font-size: 0.85em; /* Was 0.9em */
+  font-size: 1em; /* Was 0.9em */
   font-style: italic;
   color: #555; /* Optional: Change the color for better readability */
   margin: 1em 0;
   padding-left: 1em;
   border-left: 4px solid #ccc; /* Optional: Add a left border for styling */
+}
+
+blockquote.quote {
+  font-size: 0.85em; /* Was 0.9em */
+  color: #1a2a4a;
+  font-style: italic;
+  font-family: 'Inter', sans-serif; /* Match body font */
 }
 
 /* =========================
@@ -518,4 +525,96 @@ li {
 ol li {
   margin-bottom: 1rem;  /* Add spacing between list items */
   padding-left: 1rem;  /* Add some space between number and text */
+}
+
+/* =========================
+   Folded Diagram
+   ========================= */
+.folded-diagram {
+  max-width: 350px !important;
+  width: auto !important;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+img.folded-diagram {
+  width: auto !important;
+  max-width: 350px !important;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.content > details {
+  padding: 0 !important;
+  background: none;
+  box-shadow: none;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+details img {
+  width: 350px !important;
+  max-width: 100% !important;
+  height: auto !important;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+}
+
+details .gatsby-resp-image-wrapper {
+  width: 350px !important;
+  max-width: 100% !important;
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+  position: static !important;
+}
+
+details {
+  background: #f3f6fa;
+  border: 1.5px solid #bcd0e0;
+  border-radius: 8px;
+  padding: 1.2em 1.5em 1.2em 1.5em;
+  margin: 1.5em 0;
+  box-shadow: 0 2px 8px rgba(60, 100, 180, 0.06);
+  transition: box-shadow 0.2s;
+  font-family: 'Inter', sans-serif; /* Match body font */
+  font-size: 0.97em;                /* Slightly smaller than body */
+  color: #2d3a4a;                   /* Subtle blue-gray for distinction */
+}
+
+details[open] {
+  box-shadow: 0 4px 16px rgba(60, 100, 180, 0.10);
+}
+
+details summary {
+  font-family: 'Inter', sans-serif; /* Match body font */
+  font-size: 1.05em;
+  color: #2563eb;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  margin-bottom: 0.8em;
+  padding: 0.2em 0;
+  background: none;
+  border: none;
+}
+
+/* =========================
+   Code Styling
+   ========================= */
+code {
+  font-family: 'JetBrains Mono', 'Fira Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+  font-size: 0.97em;
+  background: #f7f3ea;      /* Use the taupe background you see in Markdown */
+  color: #222;              /* Use the black text you see in Markdown */
+  border-radius: 4px;
+  padding: 0.15em 0.4em;
+  border: 1px solid #e0e6ef;
+  vertical-align: baseline;
+  box-shadow: none;
 }
