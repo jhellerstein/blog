@@ -175,16 +175,14 @@ To use our version vectors, we will make a few small changes to our OR-set desig
 We can now do expiration safely: tombstones are only expired if their timestamp is lower in the partial order than the local *vector clock*: if so, we can be sure that *every other node will also delete this tombstone* if it hasn't already!
 
 ## <a id="op-based"></a>A Note on Op-Based CRDTS
-The idea of an "op-based" CRDT is that the state shared by the CRDT is actually a partially-ordered log of commands to be played at each site. Each site totally orders its commands by tagging them with a local counter (clock) value that increments on each command or message handling event. This ensures that recipients of commands from node $n$ will play them in the same order that $n$ did.
+The idea of an "op-based" CRDT is that the state shared by the CRDT is actually a partially-ordered log of operations (opaque commands) to be played at each site. The partial order is captured by each site tagging every new op it generates with a `causalContext` value. This ensures that recipients of ops from node $n$ will play them in the same order that $n$ did. Operations *across* nodes end up partially ordered, via the `causalContext`.
 
-Commands *across* nodes are partially ordered, via causal metadata as described above. It is the responsibility of the CRDT designer to ensure that concurrent operations *across* nodes are commutative.
+From the CRDT's perspective, the state $S$ of an op-based CRDT is just a set of `(causalContext, op)` tuples, with simple set-union as the `merge` function. The `causalContext` is ignored by the lattice `merge`, but carried along to provide a partial order among the ops in the set. One typical `causalContext` implementation is to use vector clock timestamps, with each node incrementing its entry in the vector clock for every op and message.
 
-From the CRDT's perspective, the state $S$ of an op-based CRDT is a compound lattice: a lexical pair `(causalContext, DAG-of-operations)`. (A DAG is itself a lattice -- for example, it can be modeled as a set lattice of edges, with `merge` being set-union.)
+That's really all there is to an "op-based" CRDT: it's a grow-only set of causally-stamped commands. Optionally, one can also "play" the log at each site by executing the ops in their causal partial order (eagerly or lazily) to materialize the local state. This is only required to support a "read" operation, and hence is effectively outside the scope of the CRDT math.
 
-Optionally, you can also "play" the log at each site (eagerly or lazily) to materialize the local state. This is effectively a "read" operation and is outside the scope of the CRDT math.
-
-To summarize: an op-based CRDT is still just a semilattice, all the way down! The only wrinkles are:
-1. Op-based CRDT state requires a causal "wrapper"
+To summarize: an op-based CRDT is still just a simple set semilattice! The only wrinkles are:
+1. The items in the op-based CRDT are stamped with causalContext to enable partially-ordered replay
 2. For the ops to be useful at replay time, ops across sites should be commutative.
 
 ## 🪜 <a id="building-on-an-existing-turtle"></a>You Can Build on a Turtle — But Know What It Carries
