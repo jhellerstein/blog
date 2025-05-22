@@ -183,7 +183,7 @@ As mentioned above, many CRDT fans like to talk about two "different" kinds of C
 
 An "op-based" CRDT is just a particular class of semilattice. The state of an op-based CRDT represents a *partially-ordered log of operations* (opaque commands). The CRDT's job is to ensure that the partially-ordered log is consistent across nodes. 
 
-The partial order among ops can be captured by each site tagging every new op it generates with a `causalContext` value. This ensures (1) that recipients of ops from node $n$ will have them ordered in the same way as $n$ did, and (2) operations *across* nodes are causally (and hence partially) ordered, via the `causalContext`.
+The partial order among ops can be captured by each site tagging every new op it generates with a `causalContext` value. This ensures (1) that recipients of ops from node $n$ will have them ordered in the same way as $n$ did, and (2) operations *across* nodes are causally ordered, via the `causalContext`.
 
 Specifically, the state $S$ of an op-based CRDT can simply be a *set* of `(causalContext, op)` tuples, with simple set-union as the `merge` function. The `causalContext` is ignored by the lattice `merge`, but carried along to preserve a consistent partial order of the log. One typical `causalContext` implementation is to use vector clock timestamps, with each node incrementing its entry in the vector clock for every op and message.
 
