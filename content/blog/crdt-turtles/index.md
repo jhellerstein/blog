@@ -70,7 +70,7 @@ When discussing CRDTs, people often use the term `merge` instead of `join`.
 
 CRDTs sometimes add additional "update" operators: 
 > `update`$: U \to (S \to S)$ 
-`update` takes an input value and uses it to directly mutate the local CRDT's state.
+`update` takes an input value of type $U$ and uses it to directly mutate the local CRDT's state.
 
 If all pairs of nodes eventually `merge` state in an associative, commutative and idempotent manner, then eventual convergence of a CRDT is guaranteed — no further assumptions required.
 
@@ -88,10 +88,8 @@ Many CRDT descriptions assume causal message delivery, message uniqueness, or re
 
 - You can always optimize later (see [below](#building-on-an-existing-turtle)) ... but the math must be sound on its own.
 
-### Case Study: Add/Remove Sets with Expiring Tombstones
-Let's walk through a concrete example.
-
-An 2-Phase (2P) Set is a simple CRDT that tracks a pair of set-based lattices where `merge` is set-union for each:
+## Case Study: Add/Remove Sets
+Let's walk through a concrete example. A 2-Phase (2P) Set is a simple CRDT that tracks a pair of set-based lattices `(adds, removes)` where `merge` is set-union for each:
 - **adds**: `{(id, element)}`
 - **removes**: `{(id, timestamp)}` (sometimes referred to as **tombstones**)
 
@@ -99,9 +97,13 @@ The 2P-Set is a **free product** of these two set lattices, which is to say that
 
 Until... you try to expire tombstoned data to save space.
 
-The OR-Set CRDT extends 2P-Sets to do this, but ... it's tricky! Let's walk through it.
+### Observed-Remove (OR) Sets
 
-Naive expiry might work by looking at a local wall-clock and expiring ids from **adds** and **removes** whose tombstones have old timestamps. This would be bad! Making this local decision can cause **non-convergent** behavior. This is not at all obvious (in fact, ChatGPT happily provided incorrect proofs in both directions!), so I constructed a proof by example.  The basic idea is this: even after all updates have been issued, nodes can pass an item back and forth as a "hot potato" indefinitely, and never converge despite communicating infinitely often! 
+The OR-Set CRDT extends 2P-Sets to allow tombstones to be expired, but ... it's tricky! Let's walk through it.
+
+A naive scheme for expiring tombstones might work as follows: look at a local wall-clock, and expire ids from **adds** and **removes** whose tombstone timestamps are "older" than a threshold. Turns out that this would be bad! Making this decision based on local time can cause **non-convergent** behavior. 
+
+This is not at all obvious (in fact, ChatGPT happily provided incorrect proofs in both directions!), so I constructed a proof by example.  The basic idea is this: even after all updates have been issued, nodes can pass an item back and forth as a "hot potato" indefinitely, and never converge despite communicating infinitely often! 
 
 <details>
 <summary>Click to see a non-convergent OR-Set cycle infinitely.</summary>
@@ -120,18 +122,20 @@ Naive expiry might work by looking at a local wall-clock and expiring ids from *
 </p>
 </details>
 
-#### 🧯 Fix: Internalize Causality
-This brings us back to the main point of this post: we need to *explicitly* include information in our OR-set semilattice to support convergent expiry of state. Specifically we can use another semilattice to track a **causal context**—e.g. a **version vector**—and use that to determine when it's safe to expire items:
+#### 🧯 Fix: Explicit Causality
+This brings us back to the main point of this post: we need to *explicitly* include information in our OR-set semilattice ... in this case, to support convergent expiry of state. Specifically we can use a nested semilattice to track a **causal context**—e.g. a **version vector**—and use that to determine when it's safe to expire items:
 
-- ✅ Expire only when every node is guaranteed to have seen a tombstone.
+- ✅ Expire a tombstone only after every node is guaranteed to know about it.
 
-This extends the OR-Set semilattice into a [lexical product](https://en.wikipedia.org/wiki/Lexicographic_order) semilattice: 
+Note that this constraint breaks the cycle in the diagram of non-convergence above! It forbids the edges `S2 -> S3`, `S5 -> S6` and `S8 -> S0`: each of those edges represents a tombstone being expired when at least one node is in a green `+` state and doesn't believe the tombstone exists!
+
+We enforce the constraint by making the OR-Set semilattice a [lexical product](https://en.wikipedia.org/wiki/Lexicographic_order) semilattice: 
 
 ```
 (causalContext, (adds, removes))
 ```
 
-Unlike our previous *free product*, the lexical product only looks at its second field `(adds, removes)` when breaking ties on the first field `causalContext`:
+Unlike our previous *free product*, the `merge` operator for the lexical product only looks at its second field `(adds, removes)` when breaking ties on the first field `causalContext`:
 
 $$
 (cC_1, (a_1, r_1)) \sqcup (cC_2, (a_2, r_2)) =
@@ -172,18 +176,26 @@ To use our version vectors, we will make a few small changes to our OR-set desig
 1. Each node locally maintains an overall version vector containing the `merge` of *all* version vectors seen so far: this is typically called a *vector clock*. It represents a high-watermark of our local knowledge of global progress. 
 2. When an item is deleted, its tombstone timestamp is set to the local vector clock.
 
-We can now do expiration safely: tombstones are only expired if their timestamp is lower in the partial order than the local *vector clock*: if so, we can be sure that *every other node will also delete this tombstone* if it hasn't already!
+We can now do expiration safely: tombstones are only expired if their timestamp is lower in the partial order than the local *vector clock*: if so, we can be sure that *every other node also knows about this tombstone, and will eventually expire it as well*.
 
 ## <a id="op-based"></a>A Note on Op-Based CRDTS
-The idea of an "op-based" CRDT is that the state shared by the CRDT is actually a partially-ordered log of operations (opaque commands) to be played at each site. The partial order is captured by each site tagging every new op it generates with a `causalContext` value. This ensures that recipients of ops from node $n$ will play them in the same order that $n$ did. Operations *across* nodes end up partially ordered, via the `causalContext`.
+As mentioned above, many CRDT fans like to talk about two "different" kinds of CRDTs: normal ("state-based") semilattice CRDTs, and something called "op-based" CRDTs. *I'm here to tell you that correct op-based CRDTs are also semilattices; the distinction is not fundamental.*
 
-From the CRDT's perspective, the state $S$ of an op-based CRDT is just a set of `(causalContext, op)` tuples, with simple set-union as the `merge` function. The `causalContext` is ignored by the lattice `merge`, but carried along to provide a partial order among the ops in the set. One typical `causalContext` implementation is to use vector clock timestamps, with each node incrementing its entry in the vector clock for every op and message.
+An "op-based" CRDT is just a particular class of semilattice. The state of an op-based CRDT represents a *partially-ordered log of operations* (opaque commands). The CRDT's job is to ensure that the partially-ordered log is consistent across nodes. 
 
-That's really all there is to an "op-based" CRDT: it's a grow-only set of causally-stamped commands. Optionally, one can also "play" the log at each site by executing the ops in their causal partial order (eagerly or lazily) to materialize the local state. This is only required to support a "read" operation, and hence is effectively outside the scope of the CRDT math.
+The partial order among ops can be captured by each site tagging every new op it generates with a `causalContext` value. This ensures (1) that recipients of ops from node $n$ will have them ordered in the same way as $n$ did, and (2) operations *across* nodes are causally (and hence partially) ordered, via the `causalContext`.
 
-To summarize: an op-based CRDT is still just a simple set semilattice! The only wrinkles are:
-1. The items in the op-based CRDT are stamped with causalContext to enable partially-ordered replay
-2. For the ops to be useful at replay time, ops across sites should be commutative.
+Specifically, the state $S$ of an op-based CRDT can simply be a *set* of `(causalContext, op)` tuples, with simple set-union as the `merge` function. The `causalContext` is ignored by the lattice `merge`, but carried along to preserve a consistent partial order of the log. One typical `causalContext` implementation is to use vector clock timestamps, with each node incrementing its entry in the vector clock for every op and message.
+
+That's really all there is to an "op-based" CRDT: it's a grow-only set of causally-stamped commands. 
+
+Typically, op-based CRDT designs assume that the log at each site is "played" (eagerly or lazily), by executing the ops in their causal partial order to materialize the local state. This is only required to support a "read" operation, and hence is effectively outside the scope of the CRDT math. Because causal order is only a partial order, different nodes could "play" some ops in different orders. As a result, op-based CRDT designs typically require the ops themselves to be mutually commutative. 
+
+If an op-based CRDT has quiesced and propagated to every node, and the ops themselves are mutually commutative, then every node can "play" the log in some total order that respects the partial order, and all nodes will end up with a convergent outcome. 
+
+To summarize: an op-based CRDT is still just a simple set semilattice of! The only wrinkles are:
+1. The items in the op-based CRDT set are stamped with causalContext to enable causally-ordered replay
+2. For the ops to be meaningful at replay time, ops across sites should be commutative.
 
 ## 🪜 <a id="building-on-an-existing-turtle"></a>You Can Build on a Turtle — But Know What It Carries
 Sometimes, a system's lower layers provide additional guarantees that allow us to skip some details and rely on a turtle below us.
