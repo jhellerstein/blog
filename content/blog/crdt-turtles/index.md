@@ -104,7 +104,7 @@ The OR-Set CRDT extends 2P-Sets to do this, but ... it's tricky! Let's walk thro
 Naive expiry might work by looking at a local wall-clock and expiring ids from **adds** and **removes** whose tombstones have old timestamps. This would be bad! Making this local decision can cause **non-convergent** behavior. This is not at all obvious (in fact, ChatGPT happily provided incorrect proofs in both directions!), so I constructed a proof by example.  The basic idea is this: even after all updates have been issued, nodes can pass an item back and forth as a "hot potato" indefinitely, and never converge despite communicating infinitely often! 
 
 <details>
-<summary>Click here to see a non-convergent OR-Set cycle infinitely.</summary>
+<summary>Click to see a non-convergent OR-Set cycle infinitely.</summary>
 
 <a href="/img/divergence_fsm_piechart.png">
 <img
