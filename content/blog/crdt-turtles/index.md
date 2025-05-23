@@ -93,7 +93,16 @@ Let's walk through a concrete example. A 2-Phase (2P) Set is a simple CRDT that 
 - **adds**: `{(id, element)}`
 - **removes**: `{(id, timestamp)}` (sometimes referred to as **tombstones**)
 
-The 2P-Set is a **free product** of these two set lattices, which is to say that the 2P-Set `merge` operator  is simply the independent `merge` of 2 **adds** sets, and 2 **removes** sets, each with $\cup$. Updates are simple: add an item by inserting into **adds**, delete an item by placing its id and time of deletion into **removes**. All good.
+The 2P-Set is a **free product** of these two set lattices, which is to say that the 2P-Set `merge` operator  is simply the independent `merge` of 2 **adds** sets, and 2 **removes** sets, each with $\cup$:
+
+$$
+(a_1, r_1) \sqcup (a_2, r_2) =
+    (a_1 \sqcup a_2, b_1 \sqcup b_2)
+$$
+
+
+
+Updates are simple: add an item by inserting into **adds**, delete an item by placing its id and time of deletion into **removes**. All good.
 
 Until... you try to expire tombstoned data to save space.
 

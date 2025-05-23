@@ -1,7 +1,7 @@
 ---
 
 layout: single
-title: "CRDTs #2: Convergence, Determinism, and Inflation"
+title: "CRDTs #3: Convergence, Determinism, and Inflation"
 date: 2025-05-01
 categories: crdts lattices algebra distributed-systems monotonicity inflationary determinism convergence eventual-consistency
 comments: true
