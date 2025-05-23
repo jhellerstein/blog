@@ -108,9 +108,9 @@ This is not at all obvious (in fact, ChatGPT happily provided incorrect proofs i
 <details>
 <summary>Click to see a non-convergent OR-Set cycle infinitely.</summary>
 
-<a href="/img/divergence_fsm_piechart.png">
+<a href="../img/divergence_fsm_piechart.png">
 <img
-  src="/img/divergence_fsm_piechart.png"
+  src="../img/divergence_fsm_piechart.png"
   alt="FSM Divergence Diagram"
 />
 </a>

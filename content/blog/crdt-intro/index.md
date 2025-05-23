@@ -5,7 +5,7 @@ slug: "crdt-intro"
 coverImage: ./lattices-lettuces.png
 tags: ["research", "distributed-systems", "CRDT", "algebra"]
 ---
-Over the next few days, I'm going to post a number of observations about *CRDTs*: Convergent Replicated Data Types. These are data structures that aspire to help us with *coordination-free distributed programming*, a topic that interests me a lot. How can developers (or languages/compilers) deliver distributed programs that are *safe* or *correct* in important ways, without employing expensive mechanisms for *coordination* that make the global cloud run as slowly as a sequential computer?
+Over the next few days, I'm going to post a number of observations about *CRDTs*: ~~Convergent~~ Conflict-free Replicated Data Types. These are data structures that aspire to help us with *coordination-free distributed programming*, a topic that interests me a lot. How can developers (or languages/compilers) deliver distributed programs that are *safe* or *correct* in important ways, without employing expensive mechanisms for *coordination* that make the global cloud run as slowly as a sequential computer?
 
 In a nutshell, my take is that CRDTs are built on an elegant kernel, but offer a leaky abstraction that misleads a lot of developers -- and researchers. Understanding the ideas and problems of CRDTs is a great way to walk into this domain. I'll give an overview in this post, and the series of posts will go futher.
 
