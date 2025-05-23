@@ -1,6 +1,6 @@
 ---
 layout: single
-title: "CRDTs #1: Turtles All the Way Down"
+title: "CRDTs #2: Turtles All the Way Down"
 date: 2025-05-22
 slug: "looking-back"
 coverImage: ./crdt-turtles.png
@@ -28,7 +28,7 @@ The skeptic was undeterred:<br />
 </p>
 </blockquote>
 
-*This is the 1st post in a series of 4 detailed posts I'm doing on CRDTs. Please see the [intro post](../crdt-intro/) for context.*
+*This is the 2nd post in a series of 4 posts I'm doing on CRDTs. Please see the [intro post](../crdt-intro/) for context.*
 
 Modern distributed systems often seem to rest on an stack of turtles.
 For every guarantee we make, we seem to rely on a lower-layer assumption. Eventually we're left wondering: what *is* at the bottom?
