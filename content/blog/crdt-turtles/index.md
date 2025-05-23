@@ -167,10 +167,10 @@ We begin by ensuring that each node maintains a *local clock* -- a counter that 
 <br />
 <br />
 
-A *version vector* is a map from `nodeId` to a counter lattice: it records the highest clock value a node has heard of *from each other node*. This map is itself a composite semilattice! Specifically:
+A *version vector* is a map from `nodeId`s to values from a counter lattice: it records the highest clock value a node has heard of *from each other node*. This map is itself a composite semilattice! Specifically:
 
-- The domain $S$ is a map from `nodeId` (the key) to a counter lattice value (the value)
-- The `merge` function is simply key-wise application of the value lattice `merge` (`max`). If a key is missing from one input to `merge`, we simply take its value from the other input.
+- The domain $S$ is a map from `nodeId` (the key) to a value from the lattice $(\mathbb{N},$ `max`$)$ (the value)
+- The `merge` function is simply key-wise application of the value lattice `merge` function (i.e., `max`). If a key is missing from one input to `merge`, we simply take its value from the other input.
 </details>
 
 Notice what we did here: we formed a *composite* semilattice `(causalContext, (adds, removes))` out of very simple semilattice building blocks.
