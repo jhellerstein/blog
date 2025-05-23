@@ -93,7 +93,7 @@ Let's walk through a concrete example. A 2-Phase (2P) Set is a simple CRDT that 
 - **adds**: `{(id, element)}`
 - **removes**: `{(id, timestamp)}` (sometimes referred to as **tombstones**)
 
-The 2P-Set is a **free product** of these two set lattices, which is to say that the 2P-Set `merge` operator  is simply the independent `merge` of 2 **adds** sets, and 2 **removes** sets, each with $\cup$:
+The 2P-Set is a **free product** of these two set lattices, which is to say that the 2P-Set `merge` operator  is simply the independent `merge` of 2 **adds** sets, and 2 **removes** sets:
 
 $$
 (a_1, r_1) \sqcup (a_2, r_2) =
