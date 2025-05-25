@@ -202,7 +202,7 @@ Typically, op-based CRDT designs assume that the log at each site is "played" (e
 
 If an op-based CRDT has quiesced and propagated to every node, and the ops themselves are mutually commutative, then every node can "play" the log in some total order that respects the partial order, and all nodes will end up with a convergent outcome. 
 
-To summarize: an op-based CRDT is still just a simple set semilattice of! The only wrinkles are:
+To summarize: an op-based CRDT is still just a simple set semilattice! The only wrinkles are:
 1. The items in the op-based CRDT set are stamped with causalContext to enable causally-ordered replay
 2. For the ops to be meaningful at replay time, ops across sites should be commutative.
 
