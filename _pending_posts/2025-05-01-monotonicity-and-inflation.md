@@ -1,7 +1,7 @@
 ---
 
 layout: single
-title: "CRDTs #3: Convergence, Determinism, and Inflation"
+title: "CRDTs #4: Convergence, Determinism, and Inflation"
 date: 2025-05-01
 categories: crdts lattices algebra distributed-systems monotonicity inflationary determinism convergence eventual-consistency
 comments: true
@@ -17,7 +17,7 @@ The discussion below untangles two subtle but important ideas in CRDT design, wh
 1. Determinism vs Convergence guarantees
 2. Algebraic property requirements for update functions.
 
-Warning: this post is more technical and narrow than my previous CRDT posts. On the other hand it's deeper, and I believe it contains a small novel result. I'll be curious to hear about prior work that makes this point if it's out there!
+Warning: this post is more technical and narrow than my previous CRDT posts. On the other hand it's deeper, and it contains a small result that seems novel -- though I'll be curious to hear about prior work that makes this point!
 
 
 > tl;dr: If you want your CRDTs to be deterministic, your update functions must be inflationary. If you only care about convergence (eventual agreement), you can relax that constraint and still enjoy strong eventual consistency.
@@ -129,7 +129,7 @@ Let $S = \{\bot, a, \top\}$, with $\bot < a < \top$.
 
 * Node A starts at $\top$
 * Node B starts at $\bot$
-* A single user applies DropTop one on node A
+* A single user applies DropTop once on node A
 
 **Run 1**: Send first, then update
 
@@ -147,7 +147,7 @@ Let $S = \{\bot, a, \top\}$, with $\bot < a < \top$.
 * B **merges**: $\bot \sqcup a = a$
 * Final state: A = $a$, B = $a$
 
-Same updates. Same nodes. Same messages. Just different orders. Two different final states.
+Same updates. Same nodes. Same messages. Different orders. Two different final states.
 
 ---
 
@@ -163,7 +163,7 @@ If all updates are inflationary, then once a state has moved "up" the lattice, i
 
 That last point ensures **determinism**: the final result depends only on the set of updates, not their timing.
 
-$\boxed{\text{Inflationarity is required for deterministic convergence.}}$
+$\boxed{\text{Inflationary updates are required for deterministic convergence in CRDTs. Non-inflationary updates will still converge to some common state, but the choice of converged state witll be non-deterministic.}}$
 
 ---
 
@@ -191,12 +191,14 @@ Just in case the above wasn't enough for you, here are a few more points that ma
 
 ## Brief Note: Op-Based CRDTs are Deterministic
 
-In a previous post I explained how a fully-specified Op-Based CRDT is a join semi-lattice of a particular kind: a **lexical pair lattice** $(C, P\<O>)$ composed of a **causal context lattice** $C$ and a **partial order lattice** $P$ over a domain of abstract operations $O$. The term "lexical pair" means that our merge function first takes the larger of the two $C$ fields in the inputs, along with the $P\<O>$ field from the larger of the two. In cases where the two $C$ fields are incomparable, then both fields are merged independently to form the output.
+In a previous post I explained how a fully-specified Op-Based CRDT is a join semi-lattice of a particular kind: a grow-only set lattice $P(C, O)$ composed of pairs containing **causal context lattice** $C$ and a value from a domain of abstract operations $O$, all of which are mutually commutative. The "causal context" is typically a vector clock or DAG that dictates which of the other items in the set precede this one in a partial order.
 
-At a gloss, the update functions of an op-based CRDT do the following:
+At a gloss, the update functions of an op-based CRDT takes as input an op $o \in O$ and does the following:
 
-1. increment the local causal context and merge it in (an inflationary update on the first element)  
-2. add an additional operation to the partial order of ops (an inflationary update on the second element)
+1. increment the local causal context $c$ (e.g. a new vector clock value with the local nodeId's value incremented) 
+2. add a tuple $(c, o)$ to the local set
+
+This is clearly inflationary. From the semi-lattice perspective, we are simply adding an element to a set, so the result of update is a "bigger" set. Similarly, the underlying DAG is getting bigger: 1 node is added,  some precedence edges are added as well, and nothing is taken away.
 
 There are some nuances around "expiring" history from the partial order of ops that I discuss in that same post; they do not change the inflationary nature of Op-Based CRDTs.
 
@@ -204,7 +206,7 @@ Hence Op-Based CRDTs use inflationary updates by definition, and are determinist
 
 ---
 ## What About Monotonicity?
-If you know me from the CALM Theorem, you might be suprised that I haven't used the "M" word yet: **monotonicity**. In fact, many authors in this space—myself included—have been imprecise in when we use monotonicity vs inflationarity. Let me clear this up here in this context.
+If you know me from the CALM Conjecture, you might be suprised that I haven't used the "M" word yet: **monotonicity**. In fact, many authors in this space—myself included—have been imprecise in when we use monotonicity vs inflationarity. Let me clear this up here in this context.
 
 We should start with crisp definitions.
 
@@ -214,7 +216,7 @@ $$
 x \leq y \quad \Rightarrow \quad f(x) \leq f(y)
 $$
 
-Monotonicity is a **relational property**: it relates how the ordering on inputs maps to the ordering on outputs. It ensures that if one input is more informative than another, the output reflects at least as much information.
+Monotonicity is a **relational property**: it relates how the ordering on inputs maps to the ordering on outputs. At a gloss, it ensures that the more you put into the input, the more you get in the output.
 
 ### Inflationarity
 
@@ -254,7 +256,7 @@ And here's a funny thing: consider the same function over the domain $S = \{\bot
       \   /
         ⊥       
 ```
-This is **non-monotonic!*.  To see it, consider that:
+In this domain, \text{DropTop} is **non-monotonic!*.  To see it, consider that:
 
 - $ b \leq \top$, but $\text{DropTop}(b) = b$ and $\text{DropTop}(\top) = a$, but it is *not* the case that $b \leq a$; they are incomparable!
 
@@ -280,7 +282,7 @@ Returning to CRDTs, it's easy to show that **semi-lattice join is monotonic** in
 ## Related Work
 Clearly I'm not the first person to talk about the distinction between inflationary and monotonic functions in general (it's a classical distinction in logic programming), nor even in the context of distributed or parallel computing.
 
-Here are a couple of interest prior references I've found. I'd love to know of others!
+Here's a sampling of interesting prior references I've found. I'd love to know of others!
 
 LVar inventor Lindsey Kuper has a 2015 blog post, *[What’s the difference between inflationary and monotonic functions?](https://decomposition.al/blog/2015/08/31/whats-the-difference-between-inflationary-and-monotonic-functions/)* that highlights the confusion many have regarding inflationarity and monotonicity, and gives intuitive examples to demonstrate that they are orthogonal properties.
 
