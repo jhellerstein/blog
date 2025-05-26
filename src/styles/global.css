@@ -90,6 +90,37 @@ main {
   transform: none;
 }
 
+.content > div[class*="language-"] {
+  padding: 1em !important;
+  background: #f7f3ea;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  margin-bottom: 2rem;
+}
+
+/* Override padding for all code block containers */
+.content > pre,
+.content > .gatsby-highlight,
+.content > div[class*="language-"],
+.content > div[class*="gatsby-code-"],
+.content > .highlight {
+  padding: 1em !important;
+  background: #f7f3ea !important;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  margin-bottom: 2rem;
+}
+
+/* Ensure code inside these containers has no extra padding */
+.content pre code,
+.content .gatsby-highlight pre,
+.content .gatsby-highlight code {
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
 .sidebar {
   background: none;
   padding: 0;
@@ -409,7 +440,7 @@ social-links a:hover {
 /* =========================
    Utility & Misc
    ========================= */
-.content > * {
+.content > *:not(pre):not(.gatsby-highlight):not(div[class*="language-"]):not(.highlight):not(div[class*="gatsby-code-"]) {
   background: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
@@ -418,8 +449,21 @@ social-links a:hover {
   transition: box-shadow 0.2s;
 }
 
-.content > *:hover {
-  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+.content > pre,
+.content > pre code {
+  padding: 1em !important;
+  margin-bottom: 2rem;
+  border-radius: 8px;
+  background: #f7f3ea;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.content > pre {
+  padding: 1em !important;
+  background: #f7f3ea;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  margin-bottom: 2rem;
 }
 
 /* =========================
@@ -621,4 +665,19 @@ code {
   border: 1px solid #e0e6ef;
   vertical-align: baseline;
   box-shadow: none;
+}
+
+/* Add at the very end to override PrismJS */
+pre[class*="language-"] {
+  padding: 1em !important;
+  background: #f7f3ea !important;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  margin-bottom: 2rem;
+}
+
+/* Also ensure no extra padding on code inside pre */
+pre[class*="language-"] code {
+  padding: 0 !important;
+  background: transparent !important;
 }
