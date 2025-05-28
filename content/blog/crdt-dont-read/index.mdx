@@ -121,8 +121,10 @@ Let's illustrate the problem—and ways to use CRDTs responsibly.
 A 2-Phase (Add/Remove) Set CRDT maintains two sets:
 
 ```rust
-let adds: Set<(id, element)>;
-let removes: Set<(id, element)>;
+struct 2PSet {
+    adds: Set<(id, element)>;
+    removes: Set<(id, element)>;
+}
 ```
 
 Merges? Safe—just union both sets.
