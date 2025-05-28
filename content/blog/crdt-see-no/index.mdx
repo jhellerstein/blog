@@ -1,0 +1,323 @@
+---
+title: "CRDTs #3: Don't Look Now!"
+date: 2025-05-23
+coverImage: ./potato-ferrari.png
+---
+
+Ever used a CRDT, thought you were safe, and—boom—you bought a Ferrari you didn't mean to? It could happen to you!
+
+The truth is that CRDTs are dangerous to observe: they 
+guarantee *eventual consistency*, but you'll never know when "eventual" arrives.
+That gap between what CRDTs promise and what you can safely `read` is generally not 
+well protected in CRDT libraries, and it's exactly where the bugs sneak in.
+**It is not safe to `read` a CRDT's raw state, people!**
+
+What CRDTs *can* offer—*when used properly!*—is **monotonicity**:
+the guarantee that once you've seen a fact, no future update will contradict it. 
+And that's a powerful basis for providing safe APIs to your CRDTs.
+
+> This is the 3rd post in a [series](../crdt-intro/) I'm doing on CRDTs. This one is particularly for you software engineers out there.
+> News you can use.
+
+---
+
+## Takeaways
+
+<Callout type="danger">
+**Look not at the naked state of thy CRDT!** Encapsulate it, and break that encapsulation 
+cautiously ...with plenty of code review and comments!
+</Callout>
+
+<Callout type="warning">
+**You will never experience eventuality**. Eventual consistency is an abstract concept, not a guarantee you can count on.
+</Callout>
+
+<Callout type="success">
+**All is not lost!**
+The monotonicity of many CRDTs can help, especially via [threshold functions](#threshold-functions).
+
+In general, you'll need coordination to know when you're done—use it, sparingly and strategically.
+</Callout>
+
+<Callout type="info">
+See the [CRDT Survival Guide](#survival-guide) at the end of the post!
+</Callout>
+---
+## Prologue: ‟Eventual Consistency”
+Have you ever asked that age-old question, "Are we there yet?" Eventual consistency promises you'll eventually get to an agreed-upon value across replicas... but when is "eventual"? Tomorrow? Next year? After you've bought a Ferrari you didn't mean to? 
+
+Werner Vogels [defined eventual consistency like this](https://dl.acm.org/doi/10.1145/1435417.1435432):  
+> *If no new updates are made to the object, eventually all accesses will return the last updated value.*
+
+Sounds reassuring, right? And it avoids expensive coordination protocols like Paxos or Two-Phase Commit. 
+
+But here's the catch: *How do you know there are no new updates?*
+In distributed systems, termination detection (i.e. "am I done yet?") requires knowing:
+
+1. **No node** will issue any new messages.
+2. **No messages** are in flight.
+
+In logic, that's:
+
+$$
+\neg\exists n  \; (p(n))
+$$
+
+"there does not exist an $n$ where property $p(n)$ holds". 
+
+Any time you see a $\neg\exists$ (or its doppelganger, $\forall$) in distributed logic, *beware!* One rogue message — *a single counter-example* — can arrive at any time to invalidate the property.
+
+👉 **Termination ("eventuality") is non-monotonic**. it can be true over a certain set of information, but become false if more data arrives.
+
+The [CALM Theorem](https://cacm.acm.org/research/keeping-calm/) says that eventual consistency without coordination is possible *if and only if* the program specification is monotonic. Thus (via CALM):
+
+👉 **Termination Detection requires Coordination**. 
+
+So ... in coordination-free systems, you can never know when "eventual" has arrived!
+
+<details>
+<summary>Click for a review of monotonicity.</summary>
+
+Given a function $f:S \rightarrow T$, where $S$ and $T$ are ordered domains, we say that $f$ is **monotonic** if:
+
+$$
+x \le y \implies f(x) \le f(y)
+$$
+
+Intuitively, a monotonic function *preserves order*: it guarantees that if the input gets "bigger", then the output gets no smaller.
+
+Monotonicity is often used in logic, where our domains $S$ and $T$ contain sets of facts. Given an input set $x$, a logical function $f$ produces a set of *conclusions*, $f(x)$. If $f$ is monotonic, $x \subseteq y \implies f(x) \subseteq f(y)$: that is, $f(y)$ contains all the facts in $f(x)$ and perhaps more. 
+
+In practical terms, if we think of $f$ as a process running over a growing stream of facts, we can say this: *once an output fact is concluded by a monotonic function, additional input facts will not invalidate that conclusion*.
+
+You can see why this is useful in a distributed system! 
+
+1. Monotonic functions allow for correct, wait-free, streaming computation.
+2. For logical monotonic functions, the truth of each conclusion is invariant in the face of additional input.
+</details>
+
+
+---
+
+## 🙋🏾‍♂️ Is Anything Safe Before ‟Eventual" comes?
+
+<Callout type="danger">
+In general, no! The state of a CRDT could be incomplete and may change.
+</Callout>
+
+This is a common misunderstanding. It's easy to confuse the formal guarantees of `merge` (which CRDTs provide) with the safety of `read`s (which they absolutely do not). 
+
+If you previously missed this, you are in good company. The danger of `read` is not prominent in online discussion, software packages, or the CRDT literature. Perhaps this post can serve as a warning and a pointer to more subtle discussion in the literature.
+
+Let's illustrate the problem—and ways to use CRDTs responsibly.
+
+---
+
+### 🚨 Two-Phase Sets: Poster Child of the Problem
+
+A 2-Phase (Add/Remove) Set CRDT maintains two sets:
+
+```rust
+let adds: Set<(id, element)>;
+let removes: Set<(id, element)>;
+```
+
+Merges? Safe—just union both sets.
+
+```rust
+fn merge(a: &2PSet, b: &2PSet) -> 2PSet {
+  2PSet {
+    adds: a.adds.union(&b.adds),
+    removes: a.removes.union(&b.removes),
+  }
+}
+```
+
+But the `read`?
+
+```rust
+fn read(s: &2PSet) -> Set<element> {
+  s.adds - s.removes
+}
+```
+
+This `read` is **non-monotonic**: as `removes` grows, your `read` result *shrinks*. That's the trap.
+
+So what could go wrong?
+
+#### 🥔 🏎️ The Potato/Ferrari Example
+<div style={{
+  float: "right",
+  width: "320px",
+  margin: "0 0 1.5rem 2rem",
+  background: "#fafaff",
+  border: "1px solid #eee",
+  borderRadius: "8px",
+  boxShadow: "0 2px 8px #0001",
+  padding: "1rem"
+}}>
+  <img src="/img/ferrari-diagonal.svg" alt="CRDT Ferrari Sequence Diagram" style={{ width: "85%", display: "block" }} />
+</div>
+Here's an example of what could go wrong, from our [Keep CALM and CRDT On](https://www.vldb.org/pvldb/vol16/p856-power.pdf)  paper:
+
+
+> While shopping online at RetailCo, you add a potato and a Ferrari to your cart. Reflecting on your finances, you decide to remove the Ferrari, and check out.<br/>
+
+```rust
+cart.add("potato");
+cart.add("Ferrari");
+cart.remove("Ferrari");
+cart.checkout();
+```
+
+The CRDT-based cart is replicated, and unfortunately replica `B` receives `checkout` before `remove`. It `read`s the cart, and ships you a Ferrari. Boom. <br/>
+
+
+👉 **Merges are safe; reads are not.** 2P-Sets? Nearly useless for safe reads.
+### What about Simpler CRDTs?
+<div style={{
+  float: "right",
+  width: "320px",
+  margin: "0 0 1.5rem 2rem",
+  background: "#fafaff",
+  border: "1px solid #eee",
+  borderRadius: "8px",
+  boxShadow: "0 2px 8px #0001",
+  padding: "1rem"
+}}>
+  <img src="/img/ingredients.svg" alt="CRDT Ingredient Sequence Diagram" style={{ width: "100%", display: "block" }} />
+</div>
+You might be saying:
+
+*Well, 2P-sets use a *set difference* operator, which is clearly non-monotonic. The CALM Theorem warned us that non-monotonic operations require coordination for consistency! 
+But surely a plain old grow-only set is safe to read? After all, its `read` function looks nice and monotonic!*
+
+You'd be right that the `read` is monotonic:
+```rust
+read(s: GrowOnlySet) -> Set {
+  s.adds
+}
+...
+let c = GrowOnlySet.new();
+```
+
+And that seems safe locally. But wait until you see the downstream logic:
+
+```rust 
+let ingredients = c.read();
+if edible(&ingredients) {
+  cook(&ingredients);
+} else {
+  panic!("InedibleError");
+}
+```
+
+Both replicas start out empty—I think we can all agree that the empty set is inedible. 
+But imagine replica `A` merges some yummy stuff:
+```rust
+c.merge(['apples', 'honey']);
+```
+We transition from `!edible` to `edible`.
+
+Now suppose replica `B` merges some more stuff:
+```rust
+c.merge({'bleach', 'Paxos'})
+```
+Merging in more stuff transitions replica `A` back from `edible` to `!edible`.
+Even though `c` grows monotonically, `edible` is not a monotonic function over `c`,
+so the result of `edible(c)` toggles from false to true to false at node `A`!
+
+👉 **The general point: even monotonic `read`s can lead to non-monotonic conclusions in downstream code.**
+
+This seems like pretty bad news! But all is not lost. Let's look at some ways to work with CRDTs that provides
+some guard rails.
+
+---
+## <a id="be-safe"></a> 🦺 Safety First: Encapsulate CRDT State
+To prevent the kinds of surprises we just saw, CRDT state should be *encapsulated*, using a language that supports strong typing. If `read` is offered, it should be marked as `unsafe`.
+
+A compiler *might* allow `read` without `unsafe` *if* it can prove all downstream logic is monotonic. But that's rare. Monotonicity is undecidable in general.
+
+If you're in Rust, check out [Hydro](https://hydro.run): we're working on these issues!
+
+
+## 👍 Safe, Practical CRDT Usage: Lower Bounds and Threshold Functions
+
+Are there any functions that can safely examine CRDT state? Yes indeed! Monotonicity to the rescue.
+
+Specificaly, since the value of a properly-written CRDT should only go up over time, CRDTs give you trustworthy *lower bounds*. Just don't treat a lower bound as a final answer—a lower bound is a special type,
+which you can only compare using `<=`! In particular, you can't test for equality (`==`) with a lower bound. 
+
+In addition, *you can expose monotone functions on CRDTs* to safely compute on their evolving state. 
+Let's see how.
+
+
+### <a id="threshold-functions"></a> ✅ Thresholds: Coordination-Free Termination
+
+Some lattices are bounded, which means they have a unique top element ($\top$). Once you hit $\top$, you're done! As a classic example, consider the boolean lattice with values `{false , true}` and merge function that computes $\vee$ (logical `or`).
+
+**Threshold functions** are boolean functions (i.e. truth predicates) on lattices that exploit this:
+- They map from a big (or unbounded) lattice to the boolean lattice
+- They are *monotone* functions: as the input gets bigger, the output can never go down -- once `true`, always `true`!
+- `true` is $\top$ and *safe to `read`*
+
+Clearly `edible` is not a threshold function. What is a good example? Here are two examples on grow-only set lattices: once true, always true!
+
+```rust
+state.len() > 100;
+state.contains('Apple Sauce');
+```
+
+CRDTs and threshold functions can be pretty useful. Even if your full lattice (like a set) has no practical $\top$, your threshold function does! Once you cross that threshold, you can treat the truth value as a stable boolean value—one that will be eventually consistent across nodes. So you can `read` the output of the threshold function safely.
+
+Threshold functions are a common example, but you can safely use any monotone function that maps to any finite, 
+ordered type!
+But remember: *until* your monotone function hits $\top$ in your output type, you're still in unsafe territory. 
+`Read`s may still change! So threshold functions are only helpful when they become true $(\top)$.
+
+---
+
+## 🧭 So What Should Systems Do?
+Realistically, many eventually consistent systems need to use some coordination at some point. And in many cases that's OK, especially if we can *avoid coordination most of the time*! As my colleague [Natacha Crooks](https://nacrooks.github.io/) said once, "most programs are not monotonic, but most programs are mostly monotonic". So the trick is to put coordination in its place. 
+
+Here's some advice as you think about eventual consistency, CRDTs, monotonic programming, and the like:
+
+**1. Coordination is still needed to *know* when you're done.**  
+Use it sparingly! For example, when you're pretty sure every node is done with a task or session — maybe because some coordination-free threshold has been met — you can employ a round of consensus to detect termination. (Of course if it fails you may have to wait and try again later.)
+
+**2. Don't trust CRDTs that have non-monotonic `read`s.**  
+Non-monotonic `read` methods like that of 2P-sets are *unsafe in any context:* it doesn't matter what you do downstream, the `read` itself exposes you to non-monotonicity and hence race conditions. 2P-sets and their more complicated sibling, OR-sets, are quite troublesome in that respect.
+The only safe way to use them is to do coordination for each `read`—which probably makes 2P-sets no more efficient
+than your favorite transactional database!
+
+**3. Embrace strong typing and escape hatches.**
+CRDT state should be encapsulated, and methods that expose the state should be marked `unsafe`. Even if the `read` is monotonic, downstream logic may not be. 
+There are certainly cases where developers will want to take their non-deterministic chances `read`ing the 
+state of a CRDT, and that's their business! But for purposes of maintainability and code review, risky behavior of that sort should be explicitly flagged in code, just like Rust requires us to flag unsafe memory accesses.
+
+**4. Monotonic thresholds are your friend.**  
+Thresholds and other monotone functions enable safe, observable progress without coordination — *if* you expect to hit $\top$.
+
+In summary, I offer this:
+### <a id="survival-guide">CRDT Survival Guide</a>
+
+<Callout type="success">
+**Safe:** `merge` freely, take advantage of threshold functions.
+</Callout>
+
+<Callout type="warning">
+**Unsafe:** `read` at your own risk.
+</Callout>
+
+<Callout type="danger">
+**Avoid:** Non-monotonic reads like in 2P-sets.
+</Callout>
+
+<Callout type="info">
+**Pro Tip:** Treat CRDT state like a radioactive material—encapsulate it, mark `read` as unsafe.
+</Callout>
+
+---
+
+## 🧠 Want More?
+Check out [Free Termination](https://arxiv.org/abs/2502.00222) for a generalization of threshold-based observation, and stay tuned for the next post on CRDTs' algebraic properties.

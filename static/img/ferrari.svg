@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" data-diagram-type="SEQUENCE" height="556px" preserveAspectRatio="none" style="width:404px;height:556px;" version="1.1" viewBox="0 0 404 556" width="404px" zoomAndPan="magnify">
+  <defs />
+  <g>
+    <g>
+      <title>&#129489;</title>
+      <rect fill="#000000" fill-opacity="0.00000" height="450.3477" width="8" x="32" y="53.404" />
+      <line style="stroke:#BBBBBB;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="36" x2="36" y1="53.404" y2="503.7517" />
+    </g>
+    <g>
+      <title>&#127344;&#65039;</title>
+      <rect fill="#000000" fill-opacity="0.00000" height="450.3477" width="8" x="273.3877" y="53.404" />
+      <line style="stroke:#BBBBBB;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="276.8545" x2="276.8545" y1="53.404" y2="503.7517" />
+    </g>
+    <g>
+      <title>&#127345;&#65039;</title>
+      <rect fill="#000000" fill-opacity="0.00000" height="450.3477" width="8" x="346.4541" y="53.404" />
+      <line style="stroke:#BBBBBB;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="349.9209" x2="349.9209" y1="53.404" y2="503.7517" />
+    </g>
+    <g class="participant participant-head" data-participant="User">
+      <rect fill="#F8F8F8" height="47.404" rx="2.5" ry="2.5" style="stroke:#888888;stroke-width:0.5;" width="42" x="15" y="5" />
+      <text fill="#222222" font-family="Helvetica Neue" font-size="28" lengthAdjust="spacing" textLength="28" x="22" y="39.44">&#129489;</text>
+    </g>
+    <g class="participant participant-tail" data-participant="User">
+      <rect fill="#F8F8F8" height="47.404" rx="2.5" ry="2.5" style="stroke:#888888;stroke-width:0.5;" width="42" x="15" y="502.7517" />
+      <text fill="#222222" font-family="Helvetica Neue" font-size="28" lengthAdjust="spacing" textLength="28" x="22" y="537.1917">&#129489;</text>
+    </g>
+
+    <g class="participant participant-head" data-participant="NodeA">
+      <rect fill="#F8F8F8" height="47.404" rx="2.5" ry="2.5" style="stroke:#888888;stroke-width:0.5;" width="43.0664" x="255.8545" y="5" />
+      <text fill="#222222" font-family="Helvetica Neue" font-size="28" lengthAdjust="spacing" textLength="29.0664" x="262.8545" y="39.44">&#127344;&#65039;</text>
+    </g>
+    <g class="participant participant-tail" data-participant="NodeA">
+      <rect fill="#F8F8F8" height="47.404" rx="2.5" ry="2.5" style="stroke:#888888;stroke-width:0.5;" width="43.0664" x="255.8545" y="502.7517" />
+      <text fill="#222222" font-family="Helvetica Neue" font-size="28" lengthAdjust="spacing" textLength="29.0664" x="262.8545" y="537.1917">&#127344;&#65039;</text>
+    </g>
+    <g class="participant participant-head" data-participant="NodeB">
+      <rect fill="#F8F8F8" height="47.404" rx="2.5" ry="2.5" style="stroke:#888888;stroke-width:0.5;" width="43.0664" x="328.9209" y="5" />
+      <text fill="#222222" font-family="Helvetica Neue" font-size="28" lengthAdjust="spacing" textLength="29.0664" x="335.9209" y="39.44">&#127345;&#65039;</text>
+    </g>
+    <g class="participant participant-tail" data-participant="NodeB">
+      <rect fill="#F8F8F8" height="47.404" rx="2.5" ry="2.5" style="stroke:#888888;stroke-width:0.5;" width="43.0664" x="328.9209" y="502.7517" />
+      <text fill="#222222" font-family="Helvetica Neue" font-size="28" lengthAdjust="spacing" textLength="29.0664" x="335.9209" y="537.1917">&#127345;&#65039;</text>
+    </g>
+    <g class="message" data-participant-1="User" data-participant-2="NodeA">
+      <polygon fill="#555555" points="265.3877,80.7145,275.3877,84.7145,265.3877,88.7145,269.3877,84.7145" style="stroke:#555555;stroke-width:1;" />
+      <line style="stroke:#555555;stroke-width:1;" x1="36" x2="271.3877" y1="84.7145" y2="84.7145" />
+      <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="8.5757" x="43" y="79.9724">1</text>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="82.7671" x="55.5757" y="79.9724">add("potato")</text>
+    </g>
+    <polygon fill="#FEFFDD" points="249,97.7145,304,97.7145,314,108.7145,304,120.7145,249,120.7145,239,108.7145,249,97.7145" style="stroke:#181818;stroke-width:0.5;" />
+    <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="51.4614" x="251" y="114.2829">({&#129364;}, &#8709;)</text>
+    <g class="message" data-participant-1="User" data-participant-2="NodeB">
+      <polygon fill="#555555" points="338.4541,143.3356,348.4541,147.3356,338.4541,151.3356,342.4541,147.3356" style="stroke:#555555;stroke-width:1;" />
+      <line style="stroke:#555555;stroke-width:1;" x1="36" x2="344.4541" y1="147.3356" y2="147.3356" />
+      <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="8.5757" x="43" y="142.5935">2</text>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="82.7671" x="55.5757" y="142.5935">add("potato")</text>
+    </g>
+    <polygon fill="#FEFFDD" points="322,160.3356,377,160.3356,387,171.3356,377,183.3356,322,183.3356,312,171.3356,322,160.3356" style="stroke:#181818;stroke-width:0.5;" />
+    <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="51.4614" x="324" y="176.904">({&#129364;}, &#8709;)</text>
+    <g class="message" data-participant-1="User" data-participant-2="NodeA">
+      <polygon fill="#555555" points="265.3877,205.9567,275.3877,209.9567,265.3877,213.9567,269.3877,209.9567" style="stroke:#555555;stroke-width:1;" />
+      <line style="stroke:#555555;stroke-width:1;" x1="36" x2="271.3877" y1="209.9567" y2="209.9567" />
+      <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="8.5757" x="43" y="205.2145">3</text>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="82.8179" x="55.5757" y="205.2145">add("Ferrari")</text>
+    </g>
+    <polygon fill="#FEFFDD" points="237,222.9567,317,222.9567,327,233.9567,317,245.9567,237,245.9567,227,233.9567,237,222.9567" style="stroke:#181818;stroke-width:0.5;" />
+    <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="76.688" x="239" y="239.5251">({&#129364;, &#127950;&#65039;}, &#8709;)</text>
+    <g class="message" data-participant-1="User" data-participant-2="NodeB">
+      <polygon fill="#555555" points="338.4541,268.5778,348.4541,272.5778,338.4541,276.5778,342.4541,272.5778" style="stroke:#555555;stroke-width:1;" />
+      <line style="stroke:#555555;stroke-width:1;" x1="36" x2="344.4541" y1="272.5778" y2="272.5778" />
+      <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="8.5757" x="43" y="267.8356">4</text>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="82.8179" x="55.5757" y="267.8356">add("Ferrari")</text>
+    </g>
+    <polygon fill="#FEFFDD" points="310,285.5778,390,285.5778,400,296.5778,390,308.5778,310,308.5778,300,296.5778,310,285.5778" style="stroke:#181818;stroke-width:0.5;" />
+    <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="76.688" x="312" y="302.1462">({&#129364;, &#127950;&#65039;}, &#8709;)</text>
+    <g class="message" data-participant-1="User" data-participant-2="NodeA">
+      <polygon fill="#555555" points="265.3877,331.1989,275.3877,335.1989,265.3877,339.1989,269.3877,335.1989" style="stroke:#555555;stroke-width:1;" />
+      <line style="stroke:#555555;stroke-width:1;" x1="36" x2="271.3877" y1="335.1989" y2="335.1989" />
+      <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="8.5757" x="43" y="330.4567">5</text>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="105.9297" x="55.5757" y="330.4567">remove("Ferrari")</text>
+    </g>
+    <g class="message" data-participant-1="User" data-participant-2="Network">
+      <polygon fill="#555555" points="192.8545,396.5095,202.8545,400.5095,192.8545,404.5095,196.8545,400.5095" style="stroke:#555555;stroke-width:1;" />
+      <line style="stroke:#555555;stroke-width:1;" x1="36" x2="198.8545" y1="400.5095" y2="400.5095" />
+      <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="8.5757" x="43" y="395.7673">6</text>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="105.9297" x="55.5757" y="395.7673">remove("Ferrari")</text>
+      <text fill="#222222" font-family="Helvetica Neue" font-size="18" lengthAdjust="spacing" textLength="28" x="205" y="407">&#128732;</text>
+    </g>
+    <polygon fill="#FEFFDD" points="228,353.5095,324,353.5095,334,364.5095,324,376.5095,228,376.5095,218,363.5095,228,353.5095" style="stroke:#181818;stroke-width:0.5;" />
+    <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="92.8184" x="230" y="370.0778">({&#129364;, &#127950;&#65039;}, {&#127950;&#65039;})</text>
+    <g class="message" data-participant-1="User" data-participant-2="NodeB">
+      <polygon fill="#555555" points="338.4541,423.1306,348.4541,427.1306,338.4541,431.1306,342.4541,427.1306" style="stroke:#555555;stroke-width:1;" />
+      <line style="stroke:#555555;stroke-width:1;" x1="36" x2="344.4541" y1="427.1306" y2="427.1306" />
+      <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="8.5757" x="43" y="422.3884">7</text>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="120.2788" x="55.5757" y="422.3884">read() / checkout()</text>
+    </g>
+    <g class="message" data-participant-1="NodeB" data-participant-2="User">
+      <polygon fill="#555555" points="47,452.4411,37,456.4411,47,460.4411,43,456.4411" style="stroke:#555555;stroke-width:1;" />
+      <line style="stroke:#555555;stroke-width:1;" x1="41" x2="349.4541" y1="456.4411" y2="456.4411" />
+      <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="8.5757" x="53" y="451.6989">8</text>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="117.5879" x="65.5757" y="451.6989">&#128666;: {&#129364;, &#127950;&#65039;} &#128556;!!!</text>
+    </g>
+    <g class="message" data-participant-1="Network" data-participant-2="NodeB">
+      <polygon fill="#555555" points="338.4541,481.7517,348.4541,485.7517,338.4541,489.7517,342.4541,485.7517" style="stroke:#555555;stroke-width:1;" />
+      <line style="stroke:#555555;stroke-width:1;" x1="204.8545" x2="344.4541" y1="485.7517" y2="485.7517" />
+      <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="8.5757" x="228.8545" y="481.0095">6</text>
+      <text fill="#222222" font-family="Helvetica Neue" font-size="18" lengthAdjust="spacing" textLength="28" x="205" y="490">&#128732;</text>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="105.9297" x="238.4302" y="481.0095">remove("Ferrari")</text>
+    </g>
+    <!--SRC=[ZPFFJjj04CRl-nGJzq0YfMf86YdA0Gc340U8KA7tZEr9M2NUDRjh_ZJYYCG9XDH3HIlbLFN20Muy3oz07e5rubGcE0PRbgpvVjyti-lr2kpAW9IeWZPdGwuFGTDHJC8d23Zs5ORGameslcqUm1OfXOe3dM8O3OanFU0YmeJnq1_qbOn5i267bZSAXROI2PF5vjbxg0ptUOJ2m8W1k0lsJxrMSYUAL7QyjDfg9QKjAKnQgDVhQM6V_o2ep-KEXWJEDWsFoVP1w51CZjNsC0YuwCDgZPtdpRMkb3n9ivlDPWwnmtls4VHgBi_pYj0bYyknTAJ9mUtb-ylex1nKenhMbf2PRMiq6WNGT2k_jWg8_EtDCUoIrjWlyaIPa-1Cnlzk740DtpMfHUdtdwdK8NCYrM1HlRX_VhoU0VOyhx-H7xAoonZ6Heeuz6mVbdI3psipPnli6IaxaJHef5DXsy8k6kInHLAzF9gC__uyhyBJvKNbbTbzn-mMcUUTqx-ie7KL9kFhAxkWeXcMnhWVYh7D58NMb4tw3yo-GHxoaPb7yzUSnAuY3BfVkluX-GCPcswvmgPJ9rH2jy4ctTwsOI4MalglkrAfnDAmp8wycVC5]-->
+  </g>
+</svg>

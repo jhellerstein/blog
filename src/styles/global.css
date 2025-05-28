@@ -6,7 +6,7 @@
    ========================= */
 body {
   font-family: 'Inter', sans-serif;
-  font-size: 15px;  /* Reduced from default 16px */
+  font-size: 14px;
   margin: 0;
   padding: 0;
   background-color: #f6f8fb;
@@ -14,15 +14,15 @@ body {
 }
 
 h1 {
-  font-size: 1.8rem; /* Was ~2rem */
+  font-size: 1.8rem;
 }
 
 h2 {
-  font-size: 1.4rem; /* Was ~1.5rem */
+  font-size: 1.4rem;
 }
 
 h3 {
-  font-size: 1.2rem; /* Was ~1.3rem */
+  font-size: 1.2rem;
 }
 
 h1, h2, h3, h4, h5, h6,
@@ -31,7 +31,6 @@ h1, h2, h3, h4, h5, h6,
   font-family: 'Space Grotesk', sans-serif;
 }
 
-/* Define a CSS variable for the gradient start color */
 :root {
   --post-preview-gradient-start: rgba(0,0,0,0.85);
 }
@@ -47,12 +46,12 @@ blockquote .no-italic {
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
-  margin-top: 0;  /* Remove top margin since banner handles spacing */
+  margin-top: 0;
 }
 
 .home-grid {
   display: grid;
-  grid-template-columns: 2.5fr 1fr; /* Make main wider for post grid */
+  grid-template-columns: 2.5fr 1fr;
   gap: 2rem;
   align-items: start;
 }
@@ -77,33 +76,46 @@ main {
 .content p {
   margin-bottom: 1.2rem;
   line-height: 1.6;
-  /* Remove any card-like styling from paragraphs */
   background: none;
   padding: 0;
   border-radius: 0;
   box-shadow: none;
 }
 
-/* Remove hover effect from paragraphs */
 .content p:hover {
   box-shadow: none;
   transform: none;
 }
 
-.content > div[class*="language-"] {
-  padding: 1em !important;
+/* =========================
+   Code Styling
+   ========================= */
+code {
+  font-family: 'JetBrains Mono', 'Fira Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
   background: #f7f3ea;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  margin-bottom: 2rem;
+  color: #222;
+  border-radius: 4px;
+  padding: 0.15em 0.4em;
+  border: 1px solid #e0e6ef;
+  vertical-align: baseline;
+  box-shadow: none;
 }
 
-/* Override padding for all code block containers */
-.content > pre,
-.content > .gatsby-highlight,
-.content > div[class*="language-"],
-.content > div[class*="gatsby-code-"],
-.content > .highlight {
+/* Shrink only inline code, not code blocks */
+:not(pre) > code {
+  font-size: 0.9em !important;
+}
+
+/* Override PrismJS code block styling */
+pre,
+pre[class*="language-"],
+pre[class*="language-"] code,
+.gatsby-highlight pre,
+.gatsby-highlight pre code {
+  font-size: 0.75rem !important;
+}
+
+pre[class*="language-"] {
   padding: 1em !important;
   background: #f7f3ea !important;
   border-radius: 8px;
@@ -111,14 +123,9 @@ main {
   margin-bottom: 2rem;
 }
 
-/* Ensure code inside these containers has no extra padding */
-.content pre code,
-.content .gatsby-highlight pre,
-.content .gatsby-highlight code {
+pre[class*="language-"] code {
   padding: 0 !important;
   background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
 }
 
 .sidebar {
@@ -150,19 +157,17 @@ main {
   text-decoration: none;
   line-height: 1.1;
   position: relative;
-  top: 12px; /* Uniform positioning for both layouts */
+  top: 12px;
 }
 
-/* Add styles for the title link */
 .site-title a {
   color: inherit;
   text-decoration: none;
 }
 
-/* Add specific adjustments for the banner version if needed */
 .banner-header .site-title {
   font-family: 'Space Grotesk', sans-serif;
-  top: 12px; /* Match the header version */
+  top: 12px;
 }
 
 .site-nav {
@@ -175,7 +180,7 @@ main {
 .site-nav [aria-current="page"] {
   color: rgba(4, 4, 4, 0.9);
   text-decoration: none;
-  font-size: 0.7rem; /* Was 0.75rem */
+  font-size: 0.7rem;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.8px;
@@ -205,10 +210,9 @@ main {
   width: 100%;
 }
 
-/* Adjust nav text size for mobile */
 @media (max-width: 768px) {
   .site-nav a {
-    font-size: 0.85rem;  /* Slightly smaller nav text on mobile */
+    font-size: 0.85rem;
   }
 }
 
@@ -237,7 +241,7 @@ main {
 }
 
 .hero-tagline {
-  font-size: 0.75rem; /* Was 0.8rem */
+  font-size: 0.75rem;
   font-weight: 400;
   color: #2d3436;
   margin: 0 0 0.5rem 0;
@@ -270,13 +274,12 @@ main {
    ========================= */
 .post-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); /* Reduced from 260px */
-  gap: 1.5rem; /* Reduced from 2rem */
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
   padding: 0;
   margin: 0;
 }
 
-/* Post preview card - base styles */
 .post-preview {
   list-style: none;
   padding: 0;
@@ -284,7 +287,7 @@ main {
   background: var(--post-preview-gradient-start);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  height: 360px; /* Reduced from 420px */
+  height: 360px;
   position: relative;
   overflow: hidden;
   display: flex;
@@ -303,10 +306,9 @@ main {
   flex-direction: column;
 }
 
-/* Square image at the top */
 .post-preview-image-wrapper {
   width: 100%;
-  aspect-ratio: 1 / 1; /* Keep square aspect ratio */
+  aspect-ratio: 1 / 1;
   background: transparent;
   flex-shrink: 0;
 }
@@ -317,13 +319,12 @@ main {
   object-fit: cover;
 }
 
-/* Text content at the bottom of the card */
 .post-preview-overlay {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 1.2rem; /* Reduced from 1.5rem */
+  padding: 1.2rem;
   background: linear-gradient(
     0deg,
     var(--post-preview-gradient-start) 0%,
@@ -339,7 +340,7 @@ main {
 
 .post-meta {
   color: rgba(255, 255, 255, 0.9);
-  font-size: 0.8rem; /* Was 0.9rem */
+  font-size: 0.8rem;
   margin-bottom: 0.5rem;
   display: flex;
   gap: 0.6rem;
@@ -347,7 +348,7 @@ main {
 
 .post-preview-overlay h2 {
   color: #fff;
-  font-size: 1rem; /* Was 1.1rem */
+  font-size: 1rem;
   font-weight: 600;
   margin: 0 0 0.5rem 0;
   line-height: 1.3;
@@ -356,7 +357,7 @@ main {
 
 .post-preview-overlay p {
   color: rgba(255, 255, 255, 0.95);
-  font-size: 0.85rem; /* Was 0.9rem */
+  font-size: 0.85rem;
   line-height: 1.4;
   margin: 0;
   text-shadow: 0 1px 2px rgba(0,0,0,0.2);
@@ -368,7 +369,7 @@ main {
 .profile {
   text-align: left;
   padding: 1rem 1.2rem;
-  background: #f9f7f3; /* slightly lighter than body for subtle contrast */
+  background: #f9f7f3;
   border-radius: 10px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.04);
   margin-top: 0.5rem;
@@ -438,43 +439,14 @@ social-links a:hover {
 }
 
 /* =========================
-   Utility & Misc
-   ========================= */
-.content > *:not(pre):not(.gatsby-highlight):not(div[class*="language-"]):not(.highlight):not(div[class*="gatsby-code-"]) {
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  padding: 2rem;
-  margin-bottom: 2rem;
-  transition: box-shadow 0.2s;
-}
-
-.content > pre,
-.content > pre code {
-  padding: 1em !important;
-  margin-bottom: 2rem;
-  border-radius: 8px;
-  background: #f7f3ea;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-}
-
-.content > pre {
-  padding: 1em !important;
-  background: #f7f3ea;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  margin-bottom: 2rem;
-}
-
-/* =========================
    Banner
    ========================= */
 .banner-hero {
   position: relative;
   width: 100%;
-  height: 120px;      /* Keep fixed height */
-  min-height: 120px;  /* Add minimum height */
-  max-height: 120px;  /* Add maximum height to prevent stretching */
+  height: 120px;
+  min-height: 120px;
+  max-height: 120px;
   margin-bottom: 2rem;
   overflow: hidden;
   display: flex;
@@ -486,15 +458,15 @@ social-links a:hover {
 .banner-hero > a {
   display: block;
   width: 2400px;
-  min-width: 960px;  /* Minimum width even on mobile */
+  min-width: 960px;
   max-width: 100%;
-  height: 120px;      /* Match banner height exactly */
+  height: 120px;
 }
 
 .site-banner {
   display: block;
   width: 100%;
-  height: 120px;      /* Match banner height exactly */
+  height: 120px;
   object-fit: cover;
   object-position: center;
   border-radius: 0 0 16px 16px;
@@ -509,7 +481,7 @@ social-links a:hover {
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 1.5rem 2rem;  /* Reduce top padding */
+  padding: 1.5rem 2rem;
   box-sizing: border-box;
 }
 
@@ -521,58 +493,58 @@ social-links a:hover {
 }
 
 .banner-tagline {
-  margin-top: auto;  /* This pushes the tagline to the bottom */
+  margin-top: auto;
   color: #000000;
   font-size: 0.8rem;
   font-weight: 400;
   text-shadow: 0 2px 8px rgba(0,0,0,0.25);
-  margin-bottom: -1rem;  /* Add some bottom margin */
+  margin-bottom: -1rem;
   margin-left: 0;
   background: rgba(255, 254, 254, 0.45);
   padding: 0.5rem 1.2rem;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.10);
-  display: inline-block;  /* This is already set */
-  width: fit-content;    /* Add this line */
+  display: inline-block;
+  width: fit-content;
 }
 
 /* =========================
    Blockquote
    ========================= */
 blockquote {
-  font-size: 1em; /* Was 0.9em */
+  font-size: 1em;
   font-style: italic;
-  color: #555; /* Optional: Change the color for better readability */
+  color: #555;
   margin: 1em 0;
   padding-left: 1em;
-  border-left: 4px solid #ccc; /* Optional: Add a left border for styling */
+  border-left: 4px solid #ccc;
 }
 
 blockquote.quote {
-  font-size: 0.85em; /* Was 0.9em */
+  font-size: 0.85em;
   color: #1a2a4a;
   font-style: italic;
-  font-family: 'Inter', sans-serif; /* Match body font */
+  font-family: 'Inter', sans-serif;
 }
 
 /* =========================
    List Styling
    ========================= */
 ol {
-  padding-left: 0;  /* Remove default list padding */
-  margin-left: 2rem;  /* Match paragraph margins */
-  list-style-position: outside;  /* Keep numbers outside text block */
+  padding-left: 0;
+  margin-left: 2rem;
+  list-style-position: outside;
 }
 
 li {
-  padding-left: 0;  /* Remove default list padding */
-  margin-left: 2rem;  /* Match paragraph margins */
-  list-style-position: outside;  /* Keep numbers outside text block */
+  padding-left: 0;
+  margin-left: 2rem;
+  list-style-position: outside;
 }
 
 ol li {
-  margin-bottom: 1rem;  /* Add spacing between list items */
-  padding-left: 1rem;  /* Add some space between number and text */
+  margin-bottom: 1rem;
+  padding-left: 1rem;
 }
 
 /* =========================
@@ -624,15 +596,15 @@ details .gatsby-resp-image-wrapper {
 
 details {
   background: #f3f6fa;
-  border: 1.5px solid #bcd0e0;
+  border: 0px solid #bcd0e0;
   border-radius: 8px;
   padding: 1.2em 1.5em 1.2em 1.5em;
   margin: 1.5em 0;
   box-shadow: 0 2px 8px rgba(60, 100, 180, 0.06);
   transition: box-shadow 0.2s;
-  font-family: 'Inter', sans-serif; /* Match body font */
-  font-size: 0.97em;                /* Slightly smaller than body */
-  color: #2d3a4a;                   /* Subtle blue-gray for distinction */
+  font-family: 'Inter', sans-serif;
+  font-size: 0.97em;
+  color: #2d3a4a;
 }
 
 details[open] {
@@ -640,7 +612,7 @@ details[open] {
 }
 
 details summary {
-  font-family: 'Inter', sans-serif; /* Match body font */
+  font-family: 'Inter', sans-serif;
   font-size: 1.05em;
   color: #2563eb;
   font-weight: 600;
@@ -653,31 +625,60 @@ details summary {
 }
 
 /* =========================
-   Code Styling
+   Callout Component
    ========================= */
-code {
-  font-family: 'JetBrains Mono', 'Fira Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
-  font-size: 0.97em;
-  background: #f7f3ea;      /* Use the taupe background you see in Markdown */
-  color: #222;              /* Use the black text you see in Markdown */
-  border-radius: 4px;
-  padding: 0.15em 0.4em;
-  border: 1px solid #e0e6ef;
-  vertical-align: baseline;
-  box-shadow: none;
-}
-
-/* Add at the very end to override PrismJS */
-pre[class*="language-"] {
-  padding: 1em !important;
-  background: #f7f3ea !important;
+.callout {
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  margin-bottom: 2rem;
+  padding: 0.5rem 1rem;
+  /* margin: 1.5rem 0; */
+  /* border-left: 4px solid; */
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
 }
 
-/* Also ensure no extra padding on code inside pre */
-pre[class*="language-"] code {
-  padding: 0 !important;
-  background: transparent !important;
+.callout-emoji {
+  font-size: 1.2em;
+  flex-shrink: 0;
+  margin-top: 0.1em;
+}
+
+.callout-content {
+  flex: 1;
+}
+
+.callout-info {
+  /* background: #eff6ff;
+  border-left-color: #3b82f6;
+  color: #1e40af; */
+}
+
+.callout-warning {
+  /* background: #fffbeb;
+  border-left-color: #f59e0b;
+  color: #92400e; */
+}
+
+.callout-danger {
+  /* background: #fef2f2;
+  border-left-color: #ef4444;
+  color: #991b1b; */
+}
+
+.callout-success {
+  /* background: #f0fdf4;
+  border-left-color: #22c55e;
+  color: #166534; */
+}
+
+.callout p {
+  margin: 0;
+  padding: 0;
+  background: none !important;
+  box-shadow: none !important;
+}
+
+.callout p:hover {
+  box-shadow: none !important;
+  transform: none !important;
 }

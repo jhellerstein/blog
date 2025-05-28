@@ -1,5 +1,6 @@
 import * as React from "react"
-import { graphql } from "gatsby"  // Remove unused Link import
+import { graphql } from "gatsby"
+
 import Bio from "../components/bio"
 import Layout from "../components/layout"
 import Seo from "../components/seo"
@@ -7,7 +8,23 @@ import PostPreview from "../components/PostPreview"
 
 const BlogIndex = ({ data, location }) => {
   const siteTitle = data.site.siteMetadata?.title || `Title`
-  const posts = data.allMarkdownRemark.nodes
+  const posts = data.allMdx.nodes
+
+  console.log(posts.map(p => p.frontmatter.date));
+  console.log(posts.map(p => p.frontmatter.dateRaw));
+
+  if (posts.length === 0) {
+    return (
+      <Layout location={location} title={siteTitle}>
+        <Bio />
+        <p>
+          No blog posts found. Add markdown posts to "content/blog" (or the
+          directory you specified for the "gatsby-source-filesystem" plugin in
+          gatsby-config.js).
+        </p>
+      </Layout>
+    )
+  }
 
   return (
     <Layout location={location} title={siteTitle}>
@@ -17,7 +34,7 @@ const BlogIndex = ({ data, location }) => {
           <ol className="post-list" style={{ listStyle: `none` }}>
             {posts.map(post => (
               <PostPreview 
-                key={post.fields.slug}  // Add key prop here
+                key={post.fields.slug}
                 post={post} 
               />
             ))}
@@ -34,13 +51,13 @@ const BlogIndex = ({ data, location }) => {
 export default BlogIndex
 
 export const pageQuery = graphql`
-  query {
+  {
     site {
       siteMetadata {
         title
       }
     }
-    allMarkdownRemark(sort: { frontmatter: { date: DESC } }) {
+    allMdx(sort: { frontmatter: { date: DESC } }) {
       nodes {
         excerpt(pruneLength: 50)
         fields {
@@ -49,6 +66,7 @@ export const pageQuery = graphql`
         }
         frontmatter {
           date(formatString: "MMMM DD, YYYY")
+          dateRaw: date
           title
           description
           coverImage {

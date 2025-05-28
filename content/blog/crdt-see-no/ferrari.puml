@@ -1,0 +1,48 @@
+@startuml
+' Modern, stylish sequence diagram for CRDT Ferrari example
+
+skinparam backgroundColor transparent
+
+skinparam sequenceParticipant {
+  BackgroundColor #f8f8f8
+  BorderColor #888
+  FontColor #222
+  FontSize 28
+  FontName "Helvetica Neue"
+  Padding 10
+}
+
+skinparam sequenceArrowColor #555
+skinparam sequenceLifeLineBorderColor #bbb
+skinparam sequenceLifeLineBackgroundColor #f8f8f8
+
+skinparam sequenceNoteBackgroundColor #ffffcc
+skinparam sequenceNoteBorderColor #e0e0a0
+skinparam sequenceNoteFontColor #333
+skinparam sequenceNoteFontSize 48
+skinparam sequenceNoteFontName "Helvetica Neue"
+
+skinparam sequenceMessageFontName "Helvetica Neue"
+
+participant "🧑" as User
+participant "🛜" as Network
+participant "🅰️" as NodeA
+participant "🅱️" as NodeB
+
+autonumber
+
+User -> NodeA: add("potato")
+Hnote over NodeA: ({🥔}, ∅)
+User -> NodeB: add("potato")
+Hnote over NodeB: ({🥔}, ∅)
+User -> NodeA: add("Ferrari")
+Hnote over NodeA: ({🥔, 🏎️}, ∅)
+User -> NodeB: add("Ferrari")
+Hnote over NodeB: ({🥔, 🏎️}, ∅)
+User -> NodeA: remove("Ferrari")
+User -> Network: remove("Ferrari")
+Hnote over NodeA: ({🥔, 🏎️}, {🏎️})
+User -> NodeB: `read`/`checkout`()
+NodeB -> User:  🚚: {🥔, 🏎️}   😬!!!
+Network -> NodeB: remove("Ferrari")
+@enduml

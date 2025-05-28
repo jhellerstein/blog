@@ -11,22 +11,17 @@ module.exports = {
   pathPrefix: "/blog",
   siteMetadata: {
     title: `Async Stream`,
-    description: `Data drives computing.`,
-    hero: {
-      title: `Welcome to Async Stream`,
-      tagline: `Occasional thoughts on coding, computing and data.`,
-      callToAction: `Check out my latest posts below`
-    },
     author: {
-      name: `Joe Hellerstein`,
-      summary: `CS Prof at Berkeley.<br /><a href="https://hydro.run">Hydro</a>-ologist.`,
+      name: `Joseph M. Hellerstein`,
+      summary: `UC Berkeley CS Prof.<br /><a href="https://hydro.run">Hydro</a>-ologist.`,
     },
-    siteUrl: `https://jhellerstein.github.io/blog`,
+    description: ``,
+    siteUrl: `https://hellerstein.io/blog`,
     social: {
       twitter: `joe_hellerstein`,
-      bluesky: `joehellerstein.bsky.social`,
       github: `jhellerstein`,
       linkedin: `joehellerstein`,
+      bluesky: `joehellerstein.bsky.social`,
     },
   },
   plugins: [
@@ -46,10 +41,10 @@ module.exports = {
       },
     },
     {
-      resolve: `gatsby-transformer-remark`,
+      resolve: `gatsby-plugin-mdx`,
       options: {
-        excerpt_separator: `<!-- endexcerpt -->`,
-        plugins: [
+        extensions: [`.mdx`, `.md`],
+        gatsbyRemarkPlugins: [
           {
             resolve: `gatsby-remark-images`,
             options: {
@@ -82,6 +77,15 @@ module.exports = {
     `gatsby-transformer-sharp`,
     `gatsby-plugin-sharp`,
     {
+      resolve: `gatsby-plugin-google-fonts`,
+      options: {
+        fonts: [
+          `oswald\:700`,
+        ],
+        display: 'swap'
+      }
+    },
+    {
       resolve: `gatsby-plugin-feed`,
       options: {
         query: `
@@ -98,22 +102,22 @@ module.exports = {
         `,
         feeds: [
           {
-            serialize: ({ query: { site, allMarkdownRemark } }) => {
-              return allMarkdownRemark.nodes.map(node => {
+            serialize: ({ query: { site, allMdx } }) => {
+              return allMdx.nodes.map(node => {
                 return Object.assign({}, node.frontmatter, {
                   description: node.excerpt,
                   date: node.frontmatter.date,
                   url: site.siteMetadata.siteUrl + node.fields.slug,
                   guid: site.siteMetadata.siteUrl + node.fields.slug,
-                  custom_elements: [{ "content:encoded": node.html }],
+                  custom_elements: [{ "content:encoded": node.body }],
                 })
               })
             },
             query: `{
-              allMarkdownRemark(sort: {frontmatter: {date: DESC}}) {
+              allMdx(sort: {frontmatter: {date: DESC}}) {
                 nodes {
                   excerpt
-                  html
+                  body
                   fields {
                     slug
                   }
@@ -125,7 +129,7 @@ module.exports = {
               }
             }`,
             output: "/rss.xml",
-            title: "Gatsby Starter Blog RSS Feed",
+            title: "Async Stream RSS Feed",
           },
         ],
       },
@@ -137,36 +141,9 @@ module.exports = {
         short_name: `AsyncStream`,
         start_url: `/`,
         background_color: `#ffffff`,
-        // This will impact how browsers show your PWA/website
-        // https://css-tricks.com/meta-theme-color-and-trickery/
-        // theme_color: `#663399`,
         display: `minimal-ui`,
-        icon: `static/img/favicon.png`, // This path is relative to the root of the site.
+        icon: `static/img/favicon.png`,
       },
     },
-    {
-      resolve: `gatsby-plugin-webfonts`,
-      options: {
-        fonts: {
-          google: [
-            {
-              family: "Oswald",
-              variants: ["700"],
-              strategy: "selfHosted"  // This caches the font locally
-            }
-          ]
-        }
-      }
-    },
-    {
-      resolve: `gatsby-plugin-google-fonts`,
-      options: {
-        fonts: [
-          `inter:400,500,600`,
-          `space grotesk:400,500,600`
-        ],
-        display: 'swap'
-      }
-    }
   ],
 }

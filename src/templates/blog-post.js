@@ -7,12 +7,11 @@ import Layout from "../components/layout"
 import Seo from "../components/seo"
 import Comments from "../components/comments"
 
-const BlogPostTemplate = ({
-  data: { previous, next, site, markdownRemark: post },
-  location,
-}) => {
-  const siteTitle = site.siteMetadata?.title || `Title`
+const BlogPostTemplate = ({ data, location, children }) => {
+  const post = data.mdx
+  const siteTitle = data.site.siteMetadata?.title || `Title`
   const image = getImage(post.frontmatter.coverImage)
+  const caption = post.frontmatter.coverImageCaption
 
   return (
     <Layout location={location} title={siteTitle}>
@@ -28,26 +27,47 @@ const BlogPostTemplate = ({
             {` • `}
             {post.fields.readingTime}
           </p>
+          {image && (
+            <div style={{
+              width: "30%",
+              float: "right",
+              marginLeft: "2rem",
+              marginBottom: "2rem",
+              background: "#fafaff",
+              border: "1px solid #eee",
+              borderRadius: "8px",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+              padding: "1rem",
+            }}>
+              <GatsbyImage
+                image={image}
+                alt={post.frontmatter.title}
+                style={{
+                  width: "100%",
+                  borderRadius: "4px",
+                  marginBottom: caption ? "0.5rem" : "0",
+                }}
+              />
+              {caption && caption.trim() && (
+                <figcaption
+                  className="cover-image-caption"
+                  style={{
+                    textAlign: "left",
+                    color: "#666",
+                    fontSize: "0.85rem",
+                    lineHeight: "1.4",
+                    margin: "0",
+                  }}
+                  dangerouslySetInnerHTML={{ __html: caption }}
+                />
+              )}
+            </div>
+          )}
         </header>
 
-        {image && (
-          <GatsbyImage
-            image={image}
-            alt={post.frontmatter.title}
-            style={{
-              float: "right",
-              width: "30%",
-              marginLeft: "1rem",
-              marginBottom: "1rem",
-              borderRadius: "6px",
-            }}
-          />
-        )}
-
-        <section
-          dangerouslySetInnerHTML={{ __html: post.html }}
-          itemProp="articleBody"
-        />
+        <section className="content" itemProp="articleBody">
+          {children}
+        </section>
         <hr />
         <footer>
           <Bio />
@@ -65,16 +85,16 @@ const BlogPostTemplate = ({
           }}
         >
           <li>
-            {previous && (
-              <Link to={previous.fields.slug} rel="prev">
-                ← {previous.frontmatter.title}
+            {data.previous && (
+              <Link to={data.previous.fields.slug} rel="prev">
+                ← {data.previous.frontmatter.title}
               </Link>
             )}
           </li>
           <li>
-            {next && (
-              <Link to={next.fields.slug} rel="next">
-                {next.frontmatter.title} →
+            {data.next && (
+              <Link to={data.next.fields.slug} rel="next">
+                {data.next.frontmatter.title} →
               </Link>
             )}
           </li>
@@ -84,10 +104,10 @@ const BlogPostTemplate = ({
   )
 }
 
-export const Head = ({ data: { markdownRemark: post } }) => (
+export const Head = ({ data }) => (
   <Seo
-    title={post.frontmatter.title}
-    description={post.frontmatter.description || post.excerpt}
+    title={data.mdx.frontmatter.title}
+    description={data.mdx.frontmatter.description || data.mdx.excerpt}
   />
 )
 
@@ -104,10 +124,9 @@ export const pageQuery = graphql`
         title
       }
     }
-    markdownRemark(id: { eq: $id }) {
+    mdx(id: { eq: $id }) {
       id
       excerpt(pruneLength: 160)
-      html
       frontmatter {
         title
         date(formatString: "MMMM DD, YYYY")
@@ -117,12 +136,13 @@ export const pageQuery = graphql`
             gatsbyImageData(width: 800, layout: CONSTRAINED)
           }
         }
+        coverImageCaption
       }
       fields {
         readingTime
       }
     }
-    previous: markdownRemark(id: { eq: $previousPostId }) {
+    previous: mdx(id: { eq: $previousPostId }) {
       fields {
         slug
       }
@@ -130,7 +150,7 @@ export const pageQuery = graphql`
         title
       }
     }
-    next: markdownRemark(id: { eq: $nextPostId }) {
+    next: mdx(id: { eq: $nextPostId }) {
       fields {
         slug
       }

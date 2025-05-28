@@ -1,0 +1,81 @@
+@startuml
+' Modern, stylish sequence diagram for CRDT ingredients example
+
+' Transparent background for blog integration
+skinparam backgroundColor transparent
+
+' Participant styling
+skinparam sequenceParticipant {
+  BackgroundColor #f8f8f8
+  BorderColor #888
+  FontColor #222
+  FontSize 28
+  FontName "Helvetica Neue"
+  Padding 10
+}
+
+' Arrow and lifeline styling
+skinparam sequenceArrowColor #555
+skinparam sequenceLifeLineBorderColor #bbb
+skinparam sequenceLifeLineBackgroundColor #f8f8f8
+
+' Note styling
+skinparam sequenceNoteBackgroundColor #ffffcc
+skinparam sequenceNoteBorderColor #e0e0a0
+skinparam sequenceNoteFontColor #333
+skinparam sequenceNoteFontSize 20
+skinparam sequenceNoteFontName "Helvetica Neue"
+skinparam sequenceNoteAlign center
+skinparam maxMessageSize 200
+
+skinparam sequenceMessageFontName "Helvetica Neue"
+
+' Use emoji for participants for a compact, modern look
+participant "🧑" as User
+participant "🅰️" as NodeA
+participant "🅱️" as NodeB
+
+autonumber
+
+note over NodeA #FFAAAA 
+!edible
+====
+(∅, ∅)
+end note
+
+note over NodeB #FFAAAA 
+!edible
+====
+(∅, ∅)
+end note
+
+User -> NodeA: add({apples, honey})
+note over NodeA #AAFFAA 
+edible
+====
+({apples,
+honey},
+∅)
+end note
+
+User -> NodeB: add({bleach, Paxos})
+note over NodeB #FFAAAA 
+!edible
+====
+({bleach,
+Paxos},
+∅)
+end note
+
+NodeB -> NodeA: merge()
+note over NodeA #FFAAAA
+!edible
+====
+({apples, 
+honey,
+bleach,
+Paxos},
+∅)
+end note
+
+@enduml
