@@ -149,16 +149,7 @@ This `read` is **non-monotonic**: as `removes` grows, your `read` result *shrink
 So what could go wrong?
 
 #### 🥔 🏎️ The Potato/Ferrari Example
-<div style={{
-  float: "right",
-  width: "320px",
-  margin: "0 0 1.5rem 2rem",
-  background: "#fafaff",
-  border: "1px solid #eee",
-  borderRadius: "8px",
-  boxShadow: "0 2px 8px #0001",
-  padding: "1rem"
-}}>
+<div className="diagram-float">
   <img src={withPrefix("/img/ferrari-diagonal.svg")} alt="CRDT Ferrari Sequence Diagram" style={{ width: "85%", display: "block" }} />
 </div>
 Here's an example of what could go wrong, from our [Keep CALM and CRDT On](https://www.vldb.org/pvldb/vol16/p856-power.pdf)  paper:
@@ -183,16 +174,7 @@ You might be saying:
 *Well, 2P-sets use a *set difference* operator, which is clearly non-monotonic. The CALM Theorem warned us that non-monotonic operations require coordination for consistency! 
 But surely a plain old grow-only set is safe to read? After all, its `read` function looks nice and monotonic!*
 
-<div style={{
-  float: "right",
-  width: "320px",
-  margin: "0 0 1.5rem 2rem",
-  background: "#fafaff",
-  border: "1px solid #eee",
-  borderRadius: "8px",
-  boxShadow: "0 2px 8px #0001",
-  padding: "1rem"
-}}>
+<div className="diagram-float">
   <img src={withPrefix("/img/ingredients.svg")} alt="CRDT Ingredient Sequence Diagram" style={{ width: "100%", display: "block" }} />
 </div>
 
