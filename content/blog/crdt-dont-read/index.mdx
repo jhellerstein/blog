@@ -211,7 +211,7 @@ Now suppose replica `B` merges some more stuff:
 ```rust
 c.merge({'bleach', 'Paxos'})
 ```
-Merging in more stuff transitions replica `A` back from `edible` to `!edible`.
+Bleach and Paxos both have their uses, but please dont ingest them!  Merging in more stuff transitions replica `A` back from `edible` to `!edible`.
 Even though `c` grows monotonically, `edible` is not a monotone function over `c`,
 so the result of `edible(c)` toggles from false to true to false at node `A`!
 
