@@ -1,5 +1,6 @@
-<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Async Stream RSS Feed]]></title><description><![CDATA[Async Stream RSS Feed]]></description><link>https://hellerstein.io/blog</link><generator>GatsbyJS</generator><lastBuildDate>Wed, 28 May 2025 19:45:56 GMT</lastBuildDate><item><title><![CDATA[CRDTs #3: Don't Look Now!]]></title><description><![CDATA[Ever used a CRDT, thought you were safe, and—boom—you bought a Ferrari you didn't mean to? It could happen to you! The truth is that CRDTs…]]></description><link>https://hellerstein.io/blog/crdt-see-no/</link><guid isPermaLink="false">https://hellerstein.io/blog/crdt-see-no/</guid><pubDate>Fri, 23 May 2025 00:00:00 GMT</pubDate><content:encoded>
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Async Stream RSS Feed]]></title><description><![CDATA[Async Stream RSS Feed]]></description><link>https://hellerstein.io/blog</link><generator>GatsbyJS</generator><lastBuildDate>Wed, 28 May 2025 20:04:53 GMT</lastBuildDate><item><title><![CDATA[CRDTs #3: Don't Look Now!]]></title><description><![CDATA[Ever used a CRDT, thought you were safe, and—boom—you bought a Ferrari you didn't mean to? It could happen to you! The truth is that CRDTs…]]></description><link>https://hellerstein.io/blog/crdt-see-no/</link><guid isPermaLink="false">https://hellerstein.io/blog/crdt-see-no/</guid><pubDate>Fri, 23 May 2025 00:00:00 GMT</pubDate><content:encoded>
 import Callout from &apos;../../../src/components/Callout&apos;
+import { withPrefix } from &quot;gatsby&quot;
 
 Ever used a CRDT, thought you were safe, and—boom—you bought a Ferrari you didn&apos;t mean to? It could happen to you!
 
@@ -64,7 +65,7 @@ $$
 
 Any time you see a $\neg\exists$ (or its doppelganger, $\forall$) in distributed logic, *beware!* One rogue message — *a single counter-example* — can arrive at any time to invalidate the property.
 
-👉 **Termination (&quot;eventuality&quot;) is non-monotonic**. it can be true over a certain set of information, but become false if more data arrives.
+👉 **Termination (&quot;eventuality&quot;) is non-monotonic**. It can be true over a certain set of information, but become false if more data arrives.
 
 The [CALM Theorem](https://cacm.acm.org/research/keeping-calm/) says that eventual consistency without coordination is possible *if and only if* the program specification is monotonic. Thus (via CALM):
 
@@ -75,22 +76,22 @@ So ... in coordination-free systems, you can never know when &quot;eventual&quot
 &lt;details&gt;
 &lt;summary&gt;Click for a review of monotonicity.&lt;/summary&gt;
 
-Given a function $f:S \rightarrow T$, where $S$ and $T$ are ordered domains, we say that $f$ is **monotonic** if:
+Given a function $f:S \rightarrow T$, where $S$ and $T$ are ordered domains, we say that $f$ is **monotone** (or **monotonic**) if:
 
 $$
 x \le y \implies f(x) \le f(y)
 $$
 
-Intuitively, a monotonic function *preserves order*: it guarantees that if the input gets &quot;bigger&quot;, then the output gets no smaller.
+Intuitively, a monotone function *preserves order*: it guarantees that if the input gets &quot;bigger&quot;, then the output gets no smaller.
 
-Monotonicity is often used in logic, where our domains $S$ and $T$ contain sets of facts. Given an input set $x$, a logical function $f$ produces a set of *conclusions*, $f(x)$. If $f$ is monotonic, $x \subseteq y \implies f(x) \subseteq f(y)$: that is, $f(y)$ contains all the facts in $f(x)$ and perhaps more. 
+Monotonicity is often used in logic, where our domains $S$ and $T$ contain sets of facts. Given an input set $x$, a logical function $f$ produces a set of *conclusions*, $f(x)$. If $f$ is monotone, $x \subseteq y \implies f(x) \subseteq f(y)$: that is, $f(y)$ contains all the facts in $f(x)$ and perhaps more. 
 
-In practical terms, if we think of $f$ as a process running over a growing stream of facts, we can say this: *once an output fact is concluded by a monotonic function, additional input facts will not invalidate that conclusion*.
+In practical terms, if we think of $f$ as a process running over a growing stream of facts, we can say this: *once an output fact is concluded by a monotone function, additional input facts will not invalidate that conclusion*.
 
 You can see why this is useful in a distributed system! 
 
-1. Monotonic functions allow for correct, wait-free, streaming computation.
-2. For logical monotonic functions, the truth of each conclusion is invariant in the face of additional input.
+1. Monotone functions allow for correct, wait-free, streaming computation.
+2. For logical monotone functions, the truth of each conclusion is invariant in the face of additional input.
 &lt;/details&gt;
 
 
@@ -153,7 +154,7 @@ So what could go wrong?
   boxShadow: &quot;0 2px 8px #0001&quot;,
   padding: &quot;1rem&quot;
 }}&gt;
-  &lt;img src=&quot;/img/ferrari-diagonal.svg&quot; alt=&quot;CRDT Ferrari Sequence Diagram&quot; style={{ width: &quot;85%&quot;, display: &quot;block&quot; }} /&gt;
+  &lt;img src={withPrefix(&quot;/img/ferrari-diagonal.svg&quot;)} alt=&quot;CRDT Ferrari Sequence Diagram&quot; style={{ width: &quot;85%&quot;, display: &quot;block&quot; }} /&gt;
 &lt;/div&gt;
 Here&apos;s an example of what could go wrong, from our [Keep CALM and CRDT On](https://www.vldb.org/pvldb/vol16/p856-power.pdf)  paper:
 
@@ -172,6 +173,11 @@ The CRDT-based cart is replicated, and unfortunately replica `B` receives `check
 
 👉 **Merges are safe; reads are not.** 2P-Sets? Nearly useless for safe reads.
 ### What about Simpler CRDTs?
+You might be saying:
+
+*Well, 2P-sets use a *set difference* operator, which is clearly non-monotonic. The CALM Theorem warned us that non-monotonic operations require coordination for consistency! 
+But surely a plain old grow-only set is safe to read? After all, its `read` function looks nice and monotonic!*
+
 &lt;div style={{
   float: &quot;right&quot;,
   width: &quot;320px&quot;,
@@ -182,12 +188,8 @@ The CRDT-based cart is replicated, and unfortunately replica `B` receives `check
   boxShadow: &quot;0 2px 8px #0001&quot;,
   padding: &quot;1rem&quot;
 }}&gt;
-  &lt;img src=&quot;/img/ingredients.svg&quot; alt=&quot;CRDT Ingredient Sequence Diagram&quot; style={{ width: &quot;100%&quot;, display: &quot;block&quot; }} /&gt;
+  &lt;img src={withPrefix(&quot;/img/ingredients.svg&quot;)} alt=&quot;CRDT Ingredient Sequence Diagram&quot; style={{ width: &quot;100%&quot;, display: &quot;block&quot; }} /&gt;
 &lt;/div&gt;
-You might be saying:
-
-*Well, 2P-sets use a *set difference* operator, which is clearly non-monotonic. The CALM Theorem warned us that non-monotonic operations require coordination for consistency! 
-But surely a plain old grow-only set is safe to read? After all, its `read` function looks nice and monotonic!*
 
 You&apos;d be right that the `read` is monotonic:
 ```rust
@@ -221,7 +223,7 @@ Now suppose replica `B` merges some more stuff:
 c.merge({&apos;bleach&apos;, &apos;Paxos&apos;})
 ```
 Merging in more stuff transitions replica `A` back from `edible` to `!edible`.
-Even though `c` grows monotonically, `edible` is not a monotonic function over `c`,
+Even though `c` grows monotonically, `edible` is not a monotone function over `c`,
 so the result of `edible(c)` toggles from false to true to false at node `A`!
 
 👉 **The general point: even monotonic `read`s can lead to non-monotonic conclusions in downstream code.**
