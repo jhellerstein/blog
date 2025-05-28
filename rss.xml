@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Async Stream RSS Feed]]></title><description><![CDATA[Async Stream RSS Feed]]></description><link>https://hellerstein.io/blog</link><generator>GatsbyJS</generator><lastBuildDate>Wed, 28 May 2025 20:04:53 GMT</lastBuildDate><item><title><![CDATA[CRDTs #3: Don't Look Now!]]></title><description><![CDATA[Ever used a CRDT, thought you were safe, and—boom—you bought a Ferrari you didn't mean to? It could happen to you! The truth is that CRDTs…]]></description><link>https://hellerstein.io/blog/crdt-see-no/</link><guid isPermaLink="false">https://hellerstein.io/blog/crdt-see-no/</guid><pubDate>Fri, 23 May 2025 00:00:00 GMT</pubDate><content:encoded>
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Async Stream RSS Feed]]></title><description><![CDATA[Async Stream RSS Feed]]></description><link>https://hellerstein.io/blog</link><generator>GatsbyJS</generator><lastBuildDate>Wed, 28 May 2025 20:13:37 GMT</lastBuildDate><item><title><![CDATA[CRDTs #3: Don't Look Now!]]></title><description><![CDATA[Ever used a CRDT, thought you were safe, and—boom—you bought a Ferrari you didn't mean to? It could happen to you! The truth is that CRDTs…]]></description><link>https://hellerstein.io/blog/crdt-see-no/</link><guid isPermaLink="false">https://hellerstein.io/blog/crdt-see-no/</guid><pubDate>Fri, 23 May 2025 00:00:00 GMT</pubDate><content:encoded>
 import Callout from &apos;../../../src/components/Callout&apos;
 import { withPrefix } from &quot;gatsby&quot;
 
@@ -144,16 +144,7 @@ This `read` is **non-monotonic**: as `removes` grows, your `read` result *shrink
 So what could go wrong?
 
 #### 🥔 🏎️ The Potato/Ferrari Example
-&lt;div style={{
-  float: &quot;right&quot;,
-  width: &quot;320px&quot;,
-  margin: &quot;0 0 1.5rem 2rem&quot;,
-  background: &quot;#fafaff&quot;,
-  border: &quot;1px solid #eee&quot;,
-  borderRadius: &quot;8px&quot;,
-  boxShadow: &quot;0 2px 8px #0001&quot;,
-  padding: &quot;1rem&quot;
-}}&gt;
+&lt;div className=&quot;diagram-float&quot;&gt;
   &lt;img src={withPrefix(&quot;/img/ferrari-diagonal.svg&quot;)} alt=&quot;CRDT Ferrari Sequence Diagram&quot; style={{ width: &quot;85%&quot;, display: &quot;block&quot; }} /&gt;
 &lt;/div&gt;
 Here&apos;s an example of what could go wrong, from our [Keep CALM and CRDT On](https://www.vldb.org/pvldb/vol16/p856-power.pdf)  paper:
@@ -178,16 +169,7 @@ You might be saying:
 *Well, 2P-sets use a *set difference* operator, which is clearly non-monotonic. The CALM Theorem warned us that non-monotonic operations require coordination for consistency! 
 But surely a plain old grow-only set is safe to read? After all, its `read` function looks nice and monotonic!*
 
-&lt;div style={{
-  float: &quot;right&quot;,
-  width: &quot;320px&quot;,
-  margin: &quot;0 0 1.5rem 2rem&quot;,
-  background: &quot;#fafaff&quot;,
-  border: &quot;1px solid #eee&quot;,
-  borderRadius: &quot;8px&quot;,
-  boxShadow: &quot;0 2px 8px #0001&quot;,
-  padding: &quot;1rem&quot;
-}}&gt;
+&lt;div className=&quot;diagram-float&quot;&gt;
   &lt;img src={withPrefix(&quot;/img/ingredients.svg&quot;)} alt=&quot;CRDT Ingredient Sequence Diagram&quot; style={{ width: &quot;100%&quot;, display: &quot;block&quot; }} /&gt;
 &lt;/div&gt;
 
