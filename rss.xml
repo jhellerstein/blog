@@ -1,285 +1,706 @@
-<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Gatsby Starter Blog RSS Feed]]></title><description><![CDATA[Data drives computing.]]></description><link>https://jhellerstein.github.io/blog</link><generator>GatsbyJS</generator><lastBuildDate>Mon, 26 May 2025 16:38:42 GMT</lastBuildDate><item><title><![CDATA[CRDTs #2: Turtles All the Way Down]]></title><description><![CDATA[This is the 2nd post in a series of 4 posts I'm doing on CRDTs. Please see the intro post for context. Modern distributed systems often seem…]]></description><link>https://jhellerstein.github.io/blog/crdt-turtles/</link><guid isPermaLink="false">https://jhellerstein.github.io/blog/crdt-turtles/</guid><pubDate>Thu, 22 May 2025 00:00:00 GMT</pubDate><content:encoded>&lt;blockquote class=&quot;quote&quot;&gt;
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Async Stream RSS Feed]]></title><description><![CDATA[Async Stream RSS Feed]]></description><link>https://hellerstein.io/blog</link><generator>GatsbyJS</generator><lastBuildDate>Wed, 28 May 2025 19:45:56 GMT</lastBuildDate><item><title><![CDATA[CRDTs #3: Don't Look Now!]]></title><description><![CDATA[Ever used a CRDT, thought you were safe, and—boom—you bought a Ferrari you didn't mean to? It could happen to you! The truth is that CRDTs…]]></description><link>https://hellerstein.io/blog/crdt-see-no/</link><guid isPermaLink="false">https://hellerstein.io/blog/crdt-see-no/</guid><pubDate>Fri, 23 May 2025 00:00:00 GMT</pubDate><content:encoded>
+import Callout from &apos;../../../src/components/Callout&apos;
+
+Ever used a CRDT, thought you were safe, and—boom—you bought a Ferrari you didn&apos;t mean to? It could happen to you!
+
+The truth is that CRDTs are dangerous to observe: they 
+guarantee *eventual consistency*, but you&apos;ll never know when &quot;eventual&quot; arrives.
+That gap between what CRDTs promise and what you can safely `read` is generally not 
+well protected in CRDT libraries, and it&apos;s exactly where the bugs sneak in.
+**It is not safe to `read` a CRDT&apos;s raw state, people!**
+
+What CRDTs *can* offer—*when used properly!*—is **monotonicity**:
+the guarantee that once you&apos;ve seen a fact, no future update will contradict it. 
+And that&apos;s a powerful basis for providing safe APIs to your CRDTs.
+
+&gt; This is the 3rd post in a [series](../crdt-intro/) I&apos;m doing on CRDTs. This one is particularly for you software engineers out there.
+&gt; News you can use.
+
+---
+
+## Takeaways
+
+&lt;Callout type=&quot;danger&quot;&gt;
+**Look not at the naked state of thy CRDT!** Encapsulate it, and break that encapsulation 
+cautiously ...with plenty of code review and comments!
+&lt;/Callout&gt;
+
+&lt;Callout type=&quot;warning&quot;&gt;
+**You will never experience eventuality**. Eventual consistency is an abstract concept, not a guarantee you can count on.
+&lt;/Callout&gt;
+
+&lt;Callout type=&quot;success&quot;&gt;
+**All is not lost!**
+The monotonicity of many CRDTs can help, especially via [threshold functions](#threshold-functions).
+
+In general, you&apos;ll need coordination to know when you&apos;re done—use it, sparingly and strategically.
+&lt;/Callout&gt;
+
+&lt;Callout type=&quot;info&quot;&gt;
+See the [CRDT Survival Guide](#survival-guide) at the end of the post!
+&lt;/Callout&gt;
+---
+## Prologue: ‟Eventual Consistency”
+Have you ever asked that age-old question, &quot;Are we there yet?&quot; Eventual consistency promises you&apos;ll eventually get to an agreed-upon value across replicas... but when is &quot;eventual&quot;? Tomorrow? Next year? After you&apos;ve bought a Ferrari you didn&apos;t mean to? 
+
+Werner Vogels [defined eventual consistency like this](https://dl.acm.org/doi/10.1145/1435417.1435432):  
+&gt; *If no new updates are made to the object, eventually all accesses will return the last updated value.*
+
+Sounds reassuring, right? And it avoids expensive coordination protocols like Paxos or Two-Phase Commit. 
+
+But here&apos;s the catch: *How do you know there are no new updates?*
+In distributed systems, termination detection (i.e. &quot;am I done yet?&quot;) requires knowing:
+
+1. **No node** will issue any new messages.
+2. **No messages** are in flight.
+
+In logic, that&apos;s:
+
+$$
+\neg\exists n  \; (p(n))
+$$
+
+&quot;there does not exist an $n$ where property $p(n)$ holds&quot;. 
+
+Any time you see a $\neg\exists$ (or its doppelganger, $\forall$) in distributed logic, *beware!* One rogue message — *a single counter-example* — can arrive at any time to invalidate the property.
+
+👉 **Termination (&quot;eventuality&quot;) is non-monotonic**. it can be true over a certain set of information, but become false if more data arrives.
+
+The [CALM Theorem](https://cacm.acm.org/research/keeping-calm/) says that eventual consistency without coordination is possible *if and only if* the program specification is monotonic. Thus (via CALM):
+
+👉 **Termination Detection requires Coordination**. 
+
+So ... in coordination-free systems, you can never know when &quot;eventual&quot; has arrived!
+
+&lt;details&gt;
+&lt;summary&gt;Click for a review of monotonicity.&lt;/summary&gt;
+
+Given a function $f:S \rightarrow T$, where $S$ and $T$ are ordered domains, we say that $f$ is **monotonic** if:
+
+$$
+x \le y \implies f(x) \le f(y)
+$$
+
+Intuitively, a monotonic function *preserves order*: it guarantees that if the input gets &quot;bigger&quot;, then the output gets no smaller.
+
+Monotonicity is often used in logic, where our domains $S$ and $T$ contain sets of facts. Given an input set $x$, a logical function $f$ produces a set of *conclusions*, $f(x)$. If $f$ is monotonic, $x \subseteq y \implies f(x) \subseteq f(y)$: that is, $f(y)$ contains all the facts in $f(x)$ and perhaps more. 
+
+In practical terms, if we think of $f$ as a process running over a growing stream of facts, we can say this: *once an output fact is concluded by a monotonic function, additional input facts will not invalidate that conclusion*.
+
+You can see why this is useful in a distributed system! 
+
+1. Monotonic functions allow for correct, wait-free, streaming computation.
+2. For logical monotonic functions, the truth of each conclusion is invariant in the face of additional input.
+&lt;/details&gt;
+
+
+---
+
+## 🙋🏾‍♂️ Is Anything Safe Before ‟Eventual&quot; comes?
+
+&lt;Callout type=&quot;danger&quot;&gt;
+In general, no! The state of a CRDT could be incomplete and may change.
+&lt;/Callout&gt;
+
+This is a common misunderstanding. It&apos;s easy to confuse the formal guarantees of `merge` (which CRDTs provide) with the safety of `read`s (which they absolutely do not). 
+
+If you previously missed this, you are in good company. The danger of `read` is not prominent in online discussion, software packages, or the CRDT literature. Perhaps this post can serve as a warning and a pointer to more subtle discussion in the literature.
+
+Let&apos;s illustrate the problem—and ways to use CRDTs responsibly.
+
+---
+
+### 🚨 Two-Phase Sets: Poster Child of the Problem
+
+A 2-Phase (Add/Remove) Set CRDT maintains two sets:
+
+```rust
+let adds: Set&lt;(id, element)&gt;;
+let removes: Set&lt;(id, element)&gt;;
+```
+
+Merges? Safe—just union both sets.
+
+```rust
+fn merge(a: &amp;2PSet, b: &amp;2PSet) -&gt; 2PSet {
+  2PSet {
+    adds: a.adds.union(&amp;b.adds),
+    removes: a.removes.union(&amp;b.removes),
+  }
+}
+```
+
+But the `read`?
+
+```rust
+fn read(s: &amp;2PSet) -&gt; Set&lt;element&gt; {
+  s.adds - s.removes
+}
+```
+
+This `read` is **non-monotonic**: as `removes` grows, your `read` result *shrinks*. That&apos;s the trap.
+
+So what could go wrong?
+
+#### 🥔 🏎️ The Potato/Ferrari Example
+&lt;div style={{
+  float: &quot;right&quot;,
+  width: &quot;320px&quot;,
+  margin: &quot;0 0 1.5rem 2rem&quot;,
+  background: &quot;#fafaff&quot;,
+  border: &quot;1px solid #eee&quot;,
+  borderRadius: &quot;8px&quot;,
+  boxShadow: &quot;0 2px 8px #0001&quot;,
+  padding: &quot;1rem&quot;
+}}&gt;
+  &lt;img src=&quot;/img/ferrari-diagonal.svg&quot; alt=&quot;CRDT Ferrari Sequence Diagram&quot; style={{ width: &quot;85%&quot;, display: &quot;block&quot; }} /&gt;
+&lt;/div&gt;
+Here&apos;s an example of what could go wrong, from our [Keep CALM and CRDT On](https://www.vldb.org/pvldb/vol16/p856-power.pdf)  paper:
+
+
+&gt; While shopping online at RetailCo, you add a potato and a Ferrari to your cart. Reflecting on your finances, you decide to remove the Ferrari, and check out.&lt;br/&gt;
+
+```rust
+cart.add(&quot;potato&quot;);
+cart.add(&quot;Ferrari&quot;);
+cart.remove(&quot;Ferrari&quot;);
+cart.checkout();
+```
+
+The CRDT-based cart is replicated, and unfortunately replica `B` receives `checkout` before `remove`. It `read`s the cart, and ships you a Ferrari. Boom. &lt;br/&gt;
+
+
+👉 **Merges are safe; reads are not.** 2P-Sets? Nearly useless for safe reads.
+### What about Simpler CRDTs?
+&lt;div style={{
+  float: &quot;right&quot;,
+  width: &quot;320px&quot;,
+  margin: &quot;0 0 1.5rem 2rem&quot;,
+  background: &quot;#fafaff&quot;,
+  border: &quot;1px solid #eee&quot;,
+  borderRadius: &quot;8px&quot;,
+  boxShadow: &quot;0 2px 8px #0001&quot;,
+  padding: &quot;1rem&quot;
+}}&gt;
+  &lt;img src=&quot;/img/ingredients.svg&quot; alt=&quot;CRDT Ingredient Sequence Diagram&quot; style={{ width: &quot;100%&quot;, display: &quot;block&quot; }} /&gt;
+&lt;/div&gt;
+You might be saying:
+
+*Well, 2P-sets use a *set difference* operator, which is clearly non-monotonic. The CALM Theorem warned us that non-monotonic operations require coordination for consistency! 
+But surely a plain old grow-only set is safe to read? After all, its `read` function looks nice and monotonic!*
+
+You&apos;d be right that the `read` is monotonic:
+```rust
+read(s: GrowOnlySet) -&gt; Set {
+  s.adds
+}
+...
+let c = GrowOnlySet.new();
+```
+
+And that seems safe locally. But wait until you see the downstream logic:
+
+```rust 
+let ingredients = c.read();
+if edible(&amp;ingredients) {
+  cook(&amp;ingredients);
+} else {
+  panic!(&quot;InedibleError&quot;);
+}
+```
+
+Both replicas start out empty—I think we can all agree that the empty set is inedible. 
+But imagine replica `A` merges some yummy stuff:
+```rust
+c.merge([&apos;apples&apos;, &apos;honey&apos;]);
+```
+We transition from `!edible` to `edible`.
+
+Now suppose replica `B` merges some more stuff:
+```rust
+c.merge({&apos;bleach&apos;, &apos;Paxos&apos;})
+```
+Merging in more stuff transitions replica `A` back from `edible` to `!edible`.
+Even though `c` grows monotonically, `edible` is not a monotonic function over `c`,
+so the result of `edible(c)` toggles from false to true to false at node `A`!
+
+👉 **The general point: even monotonic `read`s can lead to non-monotonic conclusions in downstream code.**
+
+This seems like pretty bad news! But all is not lost. Let&apos;s look at some ways to work with CRDTs that provides
+some guard rails.
+
+---
+## &lt;a id=&quot;be-safe&quot;&gt;&lt;/a&gt; 🦺 Safety First: Encapsulate CRDT State
+To prevent the kinds of surprises we just saw, CRDT state should be *encapsulated*, using a language that supports strong typing. If `read` is offered, it should be marked as `unsafe`.
+
+A compiler *might* allow `read` without `unsafe` *if* it can prove all downstream logic is monotonic. But that&apos;s rare. Monotonicity is undecidable in general.
+
+If you&apos;re in Rust, check out [Hydro](https://hydro.run): we&apos;re working on these issues!
+
+
+## 👍 Safe, Practical CRDT Usage: Lower Bounds and Threshold Functions
+
+Are there any functions that can safely examine CRDT state? Yes indeed! Monotonicity to the rescue.
+
+Specificaly, since the value of a properly-written CRDT should only go up over time, CRDTs give you trustworthy *lower bounds*. Just don&apos;t treat a lower bound as a final answer—a lower bound is a special type,
+which you can only compare using `&lt;=`! In particular, you can&apos;t test for equality (`==`) with a lower bound. 
+
+In addition, *you can expose monotone functions on CRDTs* to safely compute on their evolving state. 
+Let&apos;s see how.
+
+
+### &lt;a id=&quot;threshold-functions&quot;&gt;&lt;/a&gt; ✅ Thresholds: Coordination-Free Termination
+
+Some lattices are bounded, which means they have a unique top element ($\top$). Once you hit $\top$, you&apos;re done! As a classic example, consider the boolean lattice with values `{false , true}` and merge function that computes $\vee$ (logical `or`).
+
+**Threshold functions** are boolean functions (i.e. truth predicates) on lattices that exploit this:
+- They map from a big (or unbounded) lattice to the boolean lattice
+- They are *monotone* functions: as the input gets bigger, the output can never go down -- once `true`, always `true`!
+- `true` is $\top$ and *safe to `read`*
+
+Clearly `edible` is not a threshold function. What is a good example? Here are two examples on grow-only set lattices: once true, always true!
+
+```rust
+state.len() &gt; 100;
+state.contains(&apos;Apple Sauce&apos;);
+```
+
+CRDTs and threshold functions can be pretty useful. Even if your full lattice (like a set) has no practical $\top$, your threshold function does! Once you cross that threshold, you can treat the truth value as a stable boolean value—one that will be eventually consistent across nodes. So you can `read` the output of the threshold function safely.
+
+Threshold functions are a common example, but you can safely use any monotone function that maps to any finite, 
+ordered type!
+But remember: *until* your monotone function hits $\top$ in your output type, you&apos;re still in unsafe territory. 
+`Read`s may still change! So threshold functions are only helpful when they become true $(\top)$.
+
+---
+
+## 🧭 So What Should Systems Do?
+Realistically, many eventually consistent systems need to use some coordination at some point. And in many cases that&apos;s OK, especially if we can *avoid coordination most of the time*! As my colleague [Natacha Crooks](https://nacrooks.github.io/) said once, &quot;most programs are not monotonic, but most programs are mostly monotonic&quot;. So the trick is to put coordination in its place. 
+
+Here&apos;s some advice as you think about eventual consistency, CRDTs, monotonic programming, and the like:
+
+**1. Coordination is still needed to *know* when you&apos;re done.**  
+Use it sparingly! For example, when you&apos;re pretty sure every node is done with a task or session — maybe because some coordination-free threshold has been met — you can employ a round of consensus to detect termination. (Of course if it fails you may have to wait and try again later.)
+
+**2. Don&apos;t trust CRDTs that have non-monotonic `read`s.**  
+Non-monotonic `read` methods like that of 2P-sets are *unsafe in any context:* it doesn&apos;t matter what you do downstream, the `read` itself exposes you to non-monotonicity and hence race conditions. 2P-sets and their more complicated sibling, OR-sets, are quite troublesome in that respect.
+The only safe way to use them is to do coordination for each `read`—which probably makes 2P-sets no more efficient
+than your favorite transactional database!
+
+**3. Embrace strong typing and escape hatches.**
+CRDT state should be encapsulated, and methods that expose the state should be marked `unsafe`. Even if the `read` is monotonic, downstream logic may not be. 
+There are certainly cases where developers will want to take their non-deterministic chances `read`ing the 
+state of a CRDT, and that&apos;s their business! But for purposes of maintainability and code review, risky behavior of that sort should be explicitly flagged in code, just like Rust requires us to flag unsafe memory accesses.
+
+**4. Monotonic thresholds are your friend.**  
+Thresholds and other monotone functions enable safe, observable progress without coordination — *if* you expect to hit $\top$.
+
+In summary, I offer this:
+### &lt;a id=&quot;survival-guide&quot;&gt;CRDT Survival Guide&lt;/a&gt;
+
+&lt;Callout type=&quot;success&quot;&gt;
+**Safe:** `merge` freely, take advantage of threshold functions.
+&lt;/Callout&gt;
+
+&lt;Callout type=&quot;warning&quot;&gt;
+**Unsafe:** `read` at your own risk.
+&lt;/Callout&gt;
+
+&lt;Callout type=&quot;danger&quot;&gt;
+**Avoid:** Non-monotonic reads like in 2P-sets.
+&lt;/Callout&gt;
+
+&lt;Callout type=&quot;info&quot;&gt;
+**Pro Tip:** Treat CRDT state like a radioactive material—encapsulate it, mark `read` as unsafe.
+&lt;/Callout&gt;
+
+---
+
+## 🧠 Want More?
+Check out [Free Termination](https://arxiv.org/abs/2502.00222) for a generalization of threshold-based observation, and stay tuned for the next post on CRDTs&apos; algebraic properties.</content:encoded></item><item><title><![CDATA[CRDTs #2: Turtles All the Way Down]]></title><link>https://hellerstein.io/blog/crdt-turtles/</link><guid isPermaLink="false">https://hellerstein.io/blog/crdt-turtles/</guid><pubDate>Thu, 22 May 2025 00:00:00 GMT</pubDate><content:encoded>&lt;blockquote class=&quot;quote&quot;&gt;
 &lt;p&gt;
 After a lecture on cosmology, William James was challenged by a skeptic:  
 &lt;/p&gt;
+
 &lt;p&gt;
 &quot;Your theories are incorrect. The Earth rests on a turtle,&quot;&lt;br /&gt;
 &quot;And what holds up the turtle?&quot; James asked.  &lt;br /&gt;
 &quot;Another turtle,&quot; came the reply. &lt;br /&gt;
 &quot;And what holds that up?&quot; pressed James.
 &lt;/p&gt;
+
 &lt;p&gt;
 The skeptic was undeterred:&lt;br /&gt;
-&quot;You can&apos;t fool me, sir. It’s turtles all the way down.&quot;
+&quot;You can&apos;t fool me, sir. It&apos;s turtles all the way down.&quot;
 &lt;/p&gt;
+
 &lt;p&gt;
 &lt;em&gt;— Anecdote attributed to William James ([via J.R. Ross, 1967](https://en.wikipedia.org/wiki/Turtles_all_the_way_down))&lt;/em&gt;
 &lt;/p&gt;
 &lt;/blockquote&gt;
-&lt;p&gt;&lt;em&gt;This is the 2nd post in a series of 4 posts I&apos;m doing on CRDTs. Please see the &lt;a href=&quot;../crdt-intro/&quot;&gt;intro post&lt;/a&gt; for context.&lt;/em&gt;&lt;/p&gt;
-&lt;p&gt;Modern distributed systems often seem to rest on an stack of turtles.
-For every guarantee we make, we seem to rely on a lower-layer assumption. Eventually we&apos;re left wondering: what &lt;em&gt;is&lt;/em&gt; at the bottom?&lt;/p&gt;
-&lt;p&gt;CRDTs — &lt;em&gt;Conflict-Free Replicated Data Types&lt;/em&gt; — are often advertised as a foundation we can finally trust.
-They promise convergence of state across machines &lt;em&gt;without&lt;/em&gt; requiring perfect clocks, global operation ordering, or causal message delivery ... and they do it with math.&lt;/p&gt;
-&lt;p&gt;But many CRDTs sneak in assumptions that don&apos;t belong. That&apos;s not solid ground. It&apos;s not math. It&apos;s turtles.&lt;/p&gt;
-&lt;p&gt;In this post, we’ll show how to design CRDT internals properly:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;✅ Always in terms of a semilattice structure.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;✅ Always with clean algebraic reasoning, without hidden dependencies.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;✅ With explicit causality lattices included whenever needed.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;This will ensure we&apos;re always using careful reasoning.&lt;/p&gt;
-&lt;p&gt;&lt;em&gt;Correct CRDTs are semilattices at bottom.&lt;/em&gt; And that&apos;s math you can count on.&lt;/p&gt;
-&lt;h2&gt;🐢 A Principle for CRDTs: Semilattices All the Way Down&lt;/h2&gt;
-&lt;p&gt;Every well-designed CRDT is a &lt;strong&gt;semilattice&lt;/strong&gt;.&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;✅ A semilattice defines how information grows and &lt;code class=&quot;language-text&quot;&gt;merge&lt;/code&gt;s.&lt;/li&gt;
-&lt;li&gt;✅ It provides convergence by construction, through clean algebra.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;In case you&apos;ve read about a split between so-called &quot;state-based&quot; vs &quot;op-based&quot; CRDTs, you can ignore that for now; it&apos;s a turtlish distraction I will &lt;a href=&quot;#op-based&quot;&gt;fill in below&lt;/a&gt;. Here’s what actually matters:&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;A semilattice is:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;A set of states &lt;span class=&quot;math math-inline&quot;&gt;&lt;span class=&quot;katex&quot;&gt;&lt;span class=&quot;katex-mathml&quot;&gt;&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;semantics&gt;&lt;mrow&gt;&lt;mi&gt;S&lt;/mi&gt;&lt;/mrow&gt;&lt;annotation encoding=&quot;application/x-tex&quot;&gt;S&lt;/annotation&gt;&lt;/semantics&gt;&lt;/math&gt;&lt;/span&gt;&lt;span class=&quot;katex-html&quot; aria-hidden=&quot;true&quot;&gt;&lt;span class=&quot;base&quot;&gt;&lt;span class=&quot;strut&quot; style=&quot;height:0.6833em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.05764em;&quot;&gt;S&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/li&gt;
-&lt;li&gt;A &lt;code class=&quot;language-text&quot;&gt;join&lt;/code&gt; function &lt;span class=&quot;math math-inline&quot;&gt;&lt;span class=&quot;katex&quot;&gt;&lt;span class=&quot;katex-mathml&quot;&gt;&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;semantics&gt;&lt;mrow&gt;&lt;mo&gt;⊔&lt;/mo&gt;&lt;mo&gt;:&lt;/mo&gt;&lt;mi&gt;S&lt;/mi&gt;&lt;mo&gt;×&lt;/mo&gt;&lt;mi&gt;S&lt;/mi&gt;&lt;mo&gt;→&lt;/mo&gt;&lt;mi&gt;S&lt;/mi&gt;&lt;/mrow&gt;&lt;annotation encoding=&quot;application/x-tex&quot;&gt;\sqcup : S \times S \to S&lt;/annotation&gt;&lt;/semantics&gt;&lt;/math&gt;&lt;/span&gt;&lt;span class=&quot;katex-html&quot; aria-hidden=&quot;true&quot;&gt;&lt;span class=&quot;base&quot;&gt;&lt;span class=&quot;strut&quot; style=&quot;height:0.5556em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;⊔&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2778em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mrel&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2778em;&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;base&quot;&gt;&lt;span class=&quot;strut&quot; style=&quot;height:0.7667em;vertical-align:-0.0833em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.05764em;&quot;&gt;S&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2222em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mbin&quot;&gt;×&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2222em;&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;base&quot;&gt;&lt;span class=&quot;strut&quot; style=&quot;height:0.6833em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.05764em;&quot;&gt;S&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2778em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mrel&quot;&gt;→&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2778em;&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;base&quot;&gt;&lt;span class=&quot;strut&quot; style=&quot;height:0.6833em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.05764em;&quot;&gt;S&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt; that must satisfy &lt;strong&gt;commutativity&lt;/strong&gt;, &lt;strong&gt;associativity&lt;/strong&gt;, and &lt;strong&gt;idempotence&lt;/strong&gt;.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;The &lt;code class=&quot;language-text&quot;&gt;join&lt;/code&gt; function induces a partial order:
-&lt;span class=&quot;math math-inline&quot;&gt;&lt;span class=&quot;katex&quot;&gt;&lt;span class=&quot;katex-mathml&quot;&gt;&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;semantics&gt;&lt;mrow&gt;&lt;mi&gt;x&lt;/mi&gt;&lt;mo&gt;≤&lt;/mo&gt;&lt;mi&gt;y&lt;/mi&gt;&lt;mtext&gt;  &lt;/mtext&gt;&lt;mo&gt;⟺&lt;/mo&gt;&lt;mtext&gt;  &lt;/mtext&gt;&lt;mi&gt;x&lt;/mi&gt;&lt;mo&gt;⊔&lt;/mo&gt;&lt;mi&gt;y&lt;/mi&gt;&lt;mo&gt;=&lt;/mo&gt;&lt;mi&gt;y&lt;/mi&gt;&lt;/mrow&gt;&lt;annotation encoding=&quot;application/x-tex&quot;&gt;x \leq y \iff x \sqcup y = y&lt;/annotation&gt;&lt;/semantics&gt;&lt;/math&gt;&lt;/span&gt;&lt;span class=&quot;katex-html&quot; aria-hidden=&quot;true&quot;&gt;&lt;span class=&quot;base&quot;&gt;&lt;span class=&quot;strut&quot; style=&quot;height:0.7719em;vertical-align:-0.136em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2778em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mrel&quot;&gt;≤&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2778em;&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;base&quot;&gt;&lt;span class=&quot;strut&quot; style=&quot;height:0.7194em;vertical-align:-0.1944em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.03588em;&quot;&gt;y&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2778em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2778em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mrel&quot;&gt;⟺&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2778em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2778em;&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;base&quot;&gt;&lt;span class=&quot;strut&quot; style=&quot;height:0.5556em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2222em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mbin&quot;&gt;⊔&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2222em;&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;base&quot;&gt;&lt;span class=&quot;strut&quot; style=&quot;height:0.625em;vertical-align:-0.1944em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.03588em;&quot;&gt;y&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2778em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mrel&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2778em;&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;base&quot;&gt;&lt;span class=&quot;strut&quot; style=&quot;height:0.625em;vertical-align:-0.1944em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.03588em;&quot;&gt;y&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;When discussing CRDTs, people often use the term &lt;code class=&quot;language-text&quot;&gt;merge&lt;/code&gt; instead of &lt;code class=&quot;language-text&quot;&gt;join&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;CRDTs sometimes add additional &quot;update&quot; operators:&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;&lt;code class=&quot;language-text&quot;&gt;update&lt;/code&gt;&lt;span class=&quot;math math-inline&quot;&gt;&lt;span class=&quot;katex&quot;&gt;&lt;span class=&quot;katex-mathml&quot;&gt;&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;semantics&gt;&lt;mrow&gt;&lt;mo&gt;:&lt;/mo&gt;&lt;mi&gt;U&lt;/mi&gt;&lt;mo&gt;→&lt;/mo&gt;&lt;mo stretchy=&quot;false&quot;&gt;(&lt;/mo&gt;&lt;mi&gt;S&lt;/mi&gt;&lt;mo&gt;→&lt;/mo&gt;&lt;mi&gt;S&lt;/mi&gt;&lt;mo stretchy=&quot;false&quot;&gt;)&lt;/mo&gt;&lt;/mrow&gt;&lt;annotation encoding=&quot;application/x-tex&quot;&gt;: U \to (S \to S)&lt;/annotation&gt;&lt;/semantics&gt;&lt;/math&gt;&lt;/span&gt;&lt;span class=&quot;katex-html&quot; aria-hidden=&quot;true&quot;&gt;&lt;span class=&quot;base&quot;&gt;&lt;span class=&quot;strut&quot; style=&quot;height:0.4306em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mrel&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2778em;&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;base&quot;&gt;&lt;span class=&quot;strut&quot; style=&quot;height:0.6833em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.10903em;&quot;&gt;U&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2778em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mrel&quot;&gt;→&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2778em;&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;base&quot;&gt;&lt;span class=&quot;strut&quot; style=&quot;height:1em;vertical-align:-0.25em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mopen&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.05764em;&quot;&gt;S&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2778em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mrel&quot;&gt;→&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2778em;&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;base&quot;&gt;&lt;span class=&quot;strut&quot; style=&quot;height:1em;vertical-align:-0.25em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.05764em;&quot;&gt;S&lt;/span&gt;&lt;span class=&quot;mclose&quot;&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;&lt;code class=&quot;language-text&quot;&gt;update&lt;/code&gt; takes an input value of type &lt;span class=&quot;math math-inline&quot;&gt;&lt;span class=&quot;katex&quot;&gt;&lt;span class=&quot;katex-mathml&quot;&gt;&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;semantics&gt;&lt;mrow&gt;&lt;mi&gt;U&lt;/mi&gt;&lt;/mrow&gt;&lt;annotation encoding=&quot;application/x-tex&quot;&gt;U&lt;/annotation&gt;&lt;/semantics&gt;&lt;/math&gt;&lt;/span&gt;&lt;span class=&quot;katex-html&quot; aria-hidden=&quot;true&quot;&gt;&lt;span class=&quot;base&quot;&gt;&lt;span class=&quot;strut&quot; style=&quot;height:0.6833em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.10903em;&quot;&gt;U&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt; and uses it to directly mutate the local CRDT&apos;s state.&lt;/p&gt;
-&lt;p&gt;If all pairs of nodes eventually &lt;code class=&quot;language-text&quot;&gt;merge&lt;/code&gt; state in an associative, commutative and idempotent manner, then eventual convergence of a CRDT is guaranteed — no further assumptions required.&lt;/p&gt;
-&lt;h2&gt;🔍 Common CRDT Mistake: Hiding Assumptions&lt;/h2&gt;
-&lt;p&gt;Many CRDT descriptions assume causal message delivery, message uniqueness, or reliable clocks ... but fail to encode these in their semilattices.&lt;/p&gt;
-&lt;p&gt;🚫 That’s like putting turtles back under the CRDT again!&lt;/p&gt;
-&lt;h3&gt;✔️ Design Rule:&lt;/h3&gt;
-&lt;blockquote&gt;
-&lt;p&gt;All required assumptions must be &lt;strong&gt;internalized&lt;/strong&gt; in the semilattice structure.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;If your algorithm needs causality, encode it.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;If it expires or compresses away state, model that algebraically too, and make sure it respects the rules of a semilattice.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;You can always optimize later (see &lt;a href=&quot;#building-on-an-existing-turtle&quot;&gt;below&lt;/a&gt;) ... but the math must be sound on its own.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h2&gt;Case Study: Add/Remove Sets&lt;/h2&gt;
-&lt;p&gt;Let&apos;s walk through a concrete example. A 2-Phase (2P) Set is a simple CRDT that tracks a pair of set-based lattices &lt;code class=&quot;language-text&quot;&gt;(adds, removes)&lt;/code&gt; where &lt;code class=&quot;language-text&quot;&gt;merge&lt;/code&gt; is set-union for each:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;strong&gt;adds&lt;/strong&gt;: &lt;code class=&quot;language-text&quot;&gt;{(id, element)}&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;removes&lt;/strong&gt;: &lt;code class=&quot;language-text&quot;&gt;{(id, timestamp)}&lt;/code&gt; (sometimes referred to as &lt;strong&gt;tombstones&lt;/strong&gt;)&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;The 2P-Set is a &lt;strong&gt;free product&lt;/strong&gt; of these two set lattices, which is to say that the 2P-Set &lt;code class=&quot;language-text&quot;&gt;merge&lt;/code&gt; operator  is simply the independent &lt;code class=&quot;language-text&quot;&gt;merge&lt;/code&gt; of 2 &lt;strong&gt;adds&lt;/strong&gt; sets, and 2 &lt;strong&gt;removes&lt;/strong&gt; sets:&lt;/p&gt;
-&lt;div class=&quot;math math-display&quot;&gt;&lt;span class=&quot;katex-display&quot;&gt;&lt;span class=&quot;katex&quot;&gt;&lt;span class=&quot;katex-mathml&quot;&gt;&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot; display=&quot;block&quot;&gt;&lt;semantics&gt;&lt;mrow&gt;&lt;mo stretchy=&quot;false&quot;&gt;(&lt;/mo&gt;&lt;msub&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;/msub&gt;&lt;mo separator=&quot;true&quot;&gt;,&lt;/mo&gt;&lt;msub&gt;&lt;mi&gt;r&lt;/mi&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;/msub&gt;&lt;mo stretchy=&quot;false&quot;&gt;)&lt;/mo&gt;&lt;mo&gt;⊔&lt;/mo&gt;&lt;mo stretchy=&quot;false&quot;&gt;(&lt;/mo&gt;&lt;msub&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;mn&gt;2&lt;/mn&gt;&lt;/msub&gt;&lt;mo separator=&quot;true&quot;&gt;,&lt;/mo&gt;&lt;msub&gt;&lt;mi&gt;r&lt;/mi&gt;&lt;mn&gt;2&lt;/mn&gt;&lt;/msub&gt;&lt;mo stretchy=&quot;false&quot;&gt;)&lt;/mo&gt;&lt;mo&gt;=&lt;/mo&gt;&lt;mo stretchy=&quot;false&quot;&gt;(&lt;/mo&gt;&lt;msub&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;/msub&gt;&lt;mo&gt;⊔&lt;/mo&gt;&lt;msub&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;mn&gt;2&lt;/mn&gt;&lt;/msub&gt;&lt;mo separator=&quot;true&quot;&gt;,&lt;/mo&gt;&lt;msub&gt;&lt;mi&gt;b&lt;/mi&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;/msub&gt;&lt;mo&gt;⊔&lt;/mo&gt;&lt;msub&gt;&lt;mi&gt;b&lt;/mi&gt;&lt;mn&gt;2&lt;/mn&gt;&lt;/msub&gt;&lt;mo stretchy=&quot;false&quot;&gt;)&lt;/mo&gt;&lt;/mrow&gt;&lt;annotation encoding=&quot;application/x-tex&quot;&gt;(a_1, r_1) \sqcup (a_2, r_2) =
-    (a_1 \sqcup a_2, b_1 \sqcup b_2)&lt;/annotation&gt;&lt;/semantics&gt;&lt;/math&gt;&lt;/span&gt;&lt;span class=&quot;katex-html&quot; aria-hidden=&quot;true&quot;&gt;&lt;span class=&quot;base&quot;&gt;&lt;span class=&quot;strut&quot; style=&quot;height:1em;vertical-align:-0.25em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mopen&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;msupsub&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.3011em;&quot;&gt;&lt;span style=&quot;top:-2.55em;margin-left:0em;margin-right:0.05em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:2.7em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;sizing reset-size6 size3 mtight&quot;&gt;&lt;span class=&quot;mord mtight&quot;&gt;1&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.15em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mpunct&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.1667em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.02778em;&quot;&gt;r&lt;/span&gt;&lt;span class=&quot;msupsub&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.3011em;&quot;&gt;&lt;span style=&quot;top:-2.55em;margin-left:-0.0278em;margin-right:0.05em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:2.7em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;sizing reset-size6 size3 mtight&quot;&gt;&lt;span class=&quot;mord mtight&quot;&gt;1&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.15em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mclose&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2222em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mbin&quot;&gt;⊔&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2222em;&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;base&quot;&gt;&lt;span class=&quot;strut&quot; style=&quot;height:1em;vertical-align:-0.25em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mopen&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;msupsub&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.3011em;&quot;&gt;&lt;span style=&quot;top:-2.55em;margin-left:0em;margin-right:0.05em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:2.7em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;sizing reset-size6 size3 mtight&quot;&gt;&lt;span class=&quot;mord mtight&quot;&gt;2&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.15em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mpunct&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.1667em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.02778em;&quot;&gt;r&lt;/span&gt;&lt;span class=&quot;msupsub&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.3011em;&quot;&gt;&lt;span style=&quot;top:-2.55em;margin-left:-0.0278em;margin-right:0.05em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:2.7em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;sizing reset-size6 size3 mtight&quot;&gt;&lt;span class=&quot;mord mtight&quot;&gt;2&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.15em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mclose&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2778em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mrel&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2778em;&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;base&quot;&gt;&lt;span class=&quot;strut&quot; style=&quot;height:1em;vertical-align:-0.25em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mopen&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;msupsub&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.3011em;&quot;&gt;&lt;span style=&quot;top:-2.55em;margin-left:0em;margin-right:0.05em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:2.7em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;sizing reset-size6 size3 mtight&quot;&gt;&lt;span class=&quot;mord mtight&quot;&gt;1&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.15em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2222em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mbin&quot;&gt;⊔&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2222em;&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;base&quot;&gt;&lt;span class=&quot;strut&quot; style=&quot;height:0.8889em;vertical-align:-0.1944em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;msupsub&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.3011em;&quot;&gt;&lt;span style=&quot;top:-2.55em;margin-left:0em;margin-right:0.05em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:2.7em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;sizing reset-size6 size3 mtight&quot;&gt;&lt;span class=&quot;mord mtight&quot;&gt;2&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.15em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mpunct&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.1667em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;msupsub&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.3011em;&quot;&gt;&lt;span style=&quot;top:-2.55em;margin-left:0em;margin-right:0.05em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:2.7em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;sizing reset-size6 size3 mtight&quot;&gt;&lt;span class=&quot;mord mtight&quot;&gt;1&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.15em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2222em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mbin&quot;&gt;⊔&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2222em;&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;base&quot;&gt;&lt;span class=&quot;strut&quot; style=&quot;height:1em;vertical-align:-0.25em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;msupsub&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.3011em;&quot;&gt;&lt;span style=&quot;top:-2.55em;margin-left:0em;margin-right:0.05em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:2.7em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;sizing reset-size6 size3 mtight&quot;&gt;&lt;span class=&quot;mord mtight&quot;&gt;2&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.15em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mclose&quot;&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/div&gt;
-&lt;p&gt;Updates are simple: add an item by inserting into &lt;strong&gt;adds&lt;/strong&gt;, delete an item by placing its id and time of deletion into &lt;strong&gt;removes&lt;/strong&gt;. All good.&lt;/p&gt;
-&lt;p&gt;Until... you try to expire tombstoned data to save space.&lt;/p&gt;
-&lt;h3&gt;Observed-Remove (OR) Sets&lt;/h3&gt;
-&lt;p&gt;The OR-Set CRDT extends 2P-Sets to allow tombstones to be expired, but ... it&apos;s tricky! Let&apos;s walk through it.&lt;/p&gt;
-&lt;p&gt;A naive scheme for expiring tombstones might work as follows: look at a local wall-clock, and expire ids from &lt;strong&gt;adds&lt;/strong&gt; and &lt;strong&gt;removes&lt;/strong&gt; whose tombstone timestamps are &quot;older&quot; than a threshold. Turns out that this would be bad! Making this decision based on local time can cause &lt;strong&gt;non-convergent&lt;/strong&gt; behavior.&lt;/p&gt;
-&lt;p&gt;This is not at all obvious (in fact, ChatGPT happily provided incorrect proofs in both directions!), so I constructed a proof by example.  The basic idea is this: even after all updates have been issued, nodes can pass an item back and forth as a &quot;hot potato&quot; indefinitely, and never converge despite communicating infinitely often!&lt;/p&gt;
+
+*This is the 2nd post in a series of 4 posts I&apos;m doing on CRDTs. Please see the [intro post](../crdt-intro/) for context.*
+
+Modern distributed systems often seem to rest on an stack of turtles.
+For every guarantee we make, we seem to rely on a lower-layer assumption. Eventually we&apos;re left wondering: what *is* at the bottom?
+
+CRDTs — *Conflict-Free Replicated Data Types* — are often advertised as a foundation we can finally trust.
+They promise convergence of state across machines *without* requiring perfect clocks, global operation ordering, or causal message delivery ... and they do it with math.
+
+But many CRDTs sneak in assumptions that don&apos;t belong. That&apos;s not solid ground. It&apos;s not math. It&apos;s turtles.
+
+In this post, we’ll show how to design CRDT internals properly:
+
+- ✅ Always in terms of a semilattice structure.  
+
+- ✅ Always with clean algebraic reasoning, without hidden dependencies. 
+
+- ✅ With explicit causality lattices included whenever needed. 
+
+
+This will ensure we&apos;re always using careful reasoning.
+
+*Correct CRDTs are semilattices at bottom.* And that&apos;s math you can count on.
+
+## 🐢 A Principle for CRDTs: Semilattices All the Way Down
+Every well-designed CRDT is a **semilattice**.
+
+- ✅ A semilattice defines how information grows and `merge`s.
+- ✅ It provides convergence by construction, through clean algebra.
+
+In case you&apos;ve read about a split between so-called &quot;state-based&quot; vs &quot;op-based&quot; CRDTs, you can ignore that for now; it&apos;s a turtlish distraction I will [fill in below](#op-based). Here’s what actually matters:
+
+&gt; A semilattice is:
+&gt; - A set of states $S$
+&gt; - A `join` function $\sqcup : S \times S \to S$ that must satisfy **commutativity**, **associativity**, and **idempotence**. 
+&gt; The `join` function induces a partial order:
+&gt; $x \leq y \iff x \sqcup y = y$.
+
+When discussing CRDTs, people often use the term `merge` instead of `join`.
+
+
+CRDTs sometimes add additional &quot;update&quot; operators: 
+&gt; `update`$: U \to (S \to S)$ 
+`update` takes an input value of type $U$ and uses it to directly mutate the local CRDT&apos;s state.
+
+If all pairs of nodes eventually `merge` state in an associative, commutative and idempotent manner, then eventual convergence of a CRDT is guaranteed — no further assumptions required.
+
+## 🔍 Common CRDT Mistake: Hiding Assumptions
+Many CRDT descriptions assume causal message delivery, message uniqueness, or reliable clocks ... but fail to encode these in their semilattices.
+
+🚫 That’s like putting turtles back under the CRDT again!
+
+### ✔️ Design Rule:
+&gt; All required assumptions must be **internalized** in the semilattice structure.
+
+- If your algorithm needs causality, encode it.
+
+- If it expires or compresses away state, model that algebraically too, and make sure it respects the rules of a semilattice.
+
+- You can always optimize later (see [below](#building-on-an-existing-turtle)) ... but the math must be sound on its own.
+
+## Case Study: Add/Remove Sets
+Let&apos;s walk through a concrete example. A 2-Phase (2P) Set is a simple CRDT that tracks a pair of set-based lattices `(adds, removes)` where `merge` is set-union for each:
+- **adds**: `{(id, element)}`
+- **removes**: `{(id, timestamp)}` (sometimes referred to as **tombstones**)
+
+The 2P-Set is a **free product** of these two set lattices, which is to say that the 2P-Set `merge` operator  is simply the independent `merge` of 2 **adds** sets, and 2 **removes** sets:
+
+$$
+(a_1, r_1) \sqcup (a_2, r_2) =
+    (a_1 \sqcup a_2, b_1 \sqcup b_2)
+$$
+
+
+
+Updates are simple: add an item by inserting into **adds**, delete an item by placing its id and time of deletion into **removes**. All good.
+
+Until... you try to expire tombstoned data to save space.
+
+### Observed-Remove (OR) Sets
+
+The OR-Set CRDT extends 2P-Sets to allow tombstones to be expired, but ... it&apos;s tricky! Let&apos;s walk through it.
+
+A naive scheme for expiring tombstones might work as follows: look at a local wall-clock, and expire ids from **adds** and **removes** whose tombstone timestamps are &quot;older&quot; than a threshold. Turns out that this would be bad! Making this decision based on local time can cause **non-convergent** behavior. 
+
+This is not at all obvious (in fact, ChatGPT happily provided incorrect proofs in both directions!), so I constructed a proof by example.  The basic idea is this: even after all updates have been issued, nodes can pass an item back and forth as a &quot;hot potato&quot; indefinitely, and never converge despite communicating infinitely often! 
+
 &lt;details&gt;
 &lt;summary&gt;Click to see a non-convergent OR-Set cycle infinitely.&lt;/summary&gt;
 &lt;a href=&quot;../img/divergence_fsm_piechart.png&quot;&gt;
-&lt;img
-  src=&quot;../img/divergence_fsm_piechart.png&quot;
-  alt=&quot;FSM Divergence Diagram&quot;
-/&gt;
+  &lt;img
+    src=&quot;../img/divergence_fsm_piechart.png&quot;
+    alt=&quot;FSM Divergence Diagram&quot;
+  /&gt;
 &lt;/a&gt;
 &lt;p&gt;
-  This diagram shows an oscillating state change cycle -- a single item in an OR-set that uses naive local expiry and never converges, just keeps rotating from state to state forever. Each &apos;pie&apos; represents a *global* state of the item, across each of three nodes, &lt;code&gt;A&lt;/code&gt;, &lt;code&gt;B&lt;/code&gt; and &lt;code&gt;C&lt;/code&gt;. In each state, each of the machines either has the item only in the adds set (&lt;code&gt;+&lt;/code&gt;), in the adds and removes sets (&lt;code&gt;—&lt;/code&gt;) or in neither (&lt;code&gt;?&lt;/code&gt;). Edges are labeled with state transitions: &lt;code&gt;xp@A&lt;/code&gt; means that the item expired at node &lt;code&gt;A&lt;/code&gt;; &lt;code&gt;B &lt;- A&lt;/code&gt; means that node &lt;code&gt;B&lt;/code&gt; received a copy of the item from node &lt;code&gt;A&lt;/code&gt;.
+  This diagram shows an oscillating state change cycle -- a single item in an OR-set that uses naive local expiry and never converges, just keeps rotating from state to state forever. Each &apos;pie&apos; represents a &lt;em&gt;global&lt;/em&gt; state of the item, across each of three nodes, &lt;code&gt;A&lt;/code&gt;, &lt;code&gt;B&lt;/code&gt; and &lt;code&gt;C&lt;/code&gt;. In each state, each of the machines either has the item only in the adds set (&lt;code&gt;+&lt;/code&gt;), in the adds and removes sets (&lt;code&gt;—&lt;/code&gt;) or in neither (&lt;code&gt;?&lt;/code&gt;). Edges are labeled with state transitions: &lt;code&gt;xp@A&lt;/code&gt; means that the item expired at node &lt;code&gt;A&lt;/code&gt;; &lt;code&gt;B &amp;lt;- A&lt;/code&gt; means that node &lt;code&gt;B&lt;/code&gt; received a copy of the item from node &lt;code&gt;A&lt;/code&gt;.
 &lt;/p&gt;
 &lt;p&gt;
   Click on the image to zoom if needed.
 &lt;/p&gt;
 &lt;/details&gt;
-&lt;h4&gt;🧯 Fix: Explicit Causality&lt;/h4&gt;
-&lt;p&gt;This brings us back to the main point of this post: we need to &lt;em&gt;explicitly&lt;/em&gt; include information in our OR-set semilattice ... in this case, to support convergent expiry of state. Specifically we can use a nested semilattice to track a &lt;strong&gt;causal context&lt;/strong&gt;—e.g. a &lt;strong&gt;version vector&lt;/strong&gt;—and use that to determine when it&apos;s safe to expire items:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;✅ Expire a tombstone only after every node is guaranteed to know about it.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Note that this constraint breaks the cycle in the diagram of non-convergence above! It forbids the edges &lt;code class=&quot;language-text&quot;&gt;S2 -&gt; S3&lt;/code&gt;, &lt;code class=&quot;language-text&quot;&gt;S5 -&gt; S6&lt;/code&gt; and &lt;code class=&quot;language-text&quot;&gt;S8 -&gt; S0&lt;/code&gt;: each of those edges represents a tombstone being expired when at least one node is in a green &lt;code class=&quot;language-text&quot;&gt;+&lt;/code&gt; state and doesn&apos;t believe the tombstone exists!&lt;/p&gt;
-&lt;p&gt;We enforce the constraint by making the OR-Set semilattice a &lt;a href=&quot;https://en.wikipedia.org/wiki/Lexicographic_order&quot;&gt;lexical product&lt;/a&gt; semilattice:&lt;/p&gt;
-&lt;div class=&quot;gatsby-highlight&quot; data-language=&quot;text&quot;&gt;&lt;pre class=&quot;language-text&quot;&gt;&lt;code class=&quot;language-text&quot;&gt;(causalContext, (adds, removes))&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
-&lt;p&gt;Unlike our previous &lt;em&gt;free product&lt;/em&gt;, the &lt;code class=&quot;language-text&quot;&gt;merge&lt;/code&gt; operator for the lexical product only looks at its second field &lt;code class=&quot;language-text&quot;&gt;(adds, removes)&lt;/code&gt; when breaking ties on the first field &lt;code class=&quot;language-text&quot;&gt;causalContext&lt;/code&gt;:&lt;/p&gt;
-&lt;div class=&quot;math math-display&quot;&gt;&lt;span class=&quot;katex-display&quot;&gt;&lt;span class=&quot;katex&quot;&gt;&lt;span class=&quot;katex-mathml&quot;&gt;&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot; display=&quot;block&quot;&gt;&lt;semantics&gt;&lt;mrow&gt;&lt;mo stretchy=&quot;false&quot;&gt;(&lt;/mo&gt;&lt;mi&gt;c&lt;/mi&gt;&lt;msub&gt;&lt;mi&gt;C&lt;/mi&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;/msub&gt;&lt;mo separator=&quot;true&quot;&gt;,&lt;/mo&gt;&lt;mo stretchy=&quot;false&quot;&gt;(&lt;/mo&gt;&lt;msub&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;/msub&gt;&lt;mo separator=&quot;true&quot;&gt;,&lt;/mo&gt;&lt;msub&gt;&lt;mi&gt;r&lt;/mi&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;/msub&gt;&lt;mo stretchy=&quot;false&quot;&gt;)&lt;/mo&gt;&lt;mo stretchy=&quot;false&quot;&gt;)&lt;/mo&gt;&lt;mo&gt;⊔&lt;/mo&gt;&lt;mo stretchy=&quot;false&quot;&gt;(&lt;/mo&gt;&lt;mi&gt;c&lt;/mi&gt;&lt;msub&gt;&lt;mi&gt;C&lt;/mi&gt;&lt;mn&gt;2&lt;/mn&gt;&lt;/msub&gt;&lt;mo separator=&quot;true&quot;&gt;,&lt;/mo&gt;&lt;mo stretchy=&quot;false&quot;&gt;(&lt;/mo&gt;&lt;msub&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;mn&gt;2&lt;/mn&gt;&lt;/msub&gt;&lt;mo separator=&quot;true&quot;&gt;,&lt;/mo&gt;&lt;msub&gt;&lt;mi&gt;r&lt;/mi&gt;&lt;mn&gt;2&lt;/mn&gt;&lt;/msub&gt;&lt;mo stretchy=&quot;false&quot;&gt;)&lt;/mo&gt;&lt;mo stretchy=&quot;false&quot;&gt;)&lt;/mo&gt;&lt;mo&gt;=&lt;/mo&gt;&lt;mrow&gt;&lt;mo fence=&quot;true&quot;&gt;{&lt;/mo&gt;&lt;mtable rowspacing=&quot;0.36em&quot; columnalign=&quot;left left&quot; columnspacing=&quot;1em&quot;&gt;&lt;mtr&gt;&lt;mtd&gt;&lt;mstyle scriptlevel=&quot;0&quot; displaystyle=&quot;false&quot;&gt;&lt;mrow&gt;&lt;mo stretchy=&quot;false&quot;&gt;(&lt;/mo&gt;&lt;mi&gt;c&lt;/mi&gt;&lt;msub&gt;&lt;mi&gt;C&lt;/mi&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;/msub&gt;&lt;mo separator=&quot;true&quot;&gt;,&lt;/mo&gt;&lt;mo stretchy=&quot;false&quot;&gt;(&lt;/mo&gt;&lt;msub&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;/msub&gt;&lt;mo separator=&quot;true&quot;&gt;,&lt;/mo&gt;&lt;msub&gt;&lt;mi&gt;r&lt;/mi&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;/msub&gt;&lt;mo stretchy=&quot;false&quot;&gt;)&lt;/mo&gt;&lt;mo stretchy=&quot;false&quot;&gt;)&lt;/mo&gt;&lt;/mrow&gt;&lt;/mstyle&gt;&lt;/mtd&gt;&lt;mtd&gt;&lt;mstyle scriptlevel=&quot;0&quot; displaystyle=&quot;false&quot;&gt;&lt;mrow&gt;&lt;mtext&gt;if &lt;/mtext&gt;&lt;mi&gt;c&lt;/mi&gt;&lt;msub&gt;&lt;mi&gt;C&lt;/mi&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;/msub&gt;&lt;mo&gt;&gt;&lt;/mo&gt;&lt;mi&gt;c&lt;/mi&gt;&lt;msub&gt;&lt;mi&gt;C&lt;/mi&gt;&lt;mn&gt;2&lt;/mn&gt;&lt;/msub&gt;&lt;/mrow&gt;&lt;/mstyle&gt;&lt;/mtd&gt;&lt;/mtr&gt;&lt;mtr&gt;&lt;mtd&gt;&lt;mstyle scriptlevel=&quot;0&quot; displaystyle=&quot;false&quot;&gt;&lt;mrow&gt;&lt;mtext&gt; &lt;/mtext&gt;&lt;mo stretchy=&quot;false&quot;&gt;(&lt;/mo&gt;&lt;mi&gt;c&lt;/mi&gt;&lt;msub&gt;&lt;mi&gt;C&lt;/mi&gt;&lt;mn&gt;2&lt;/mn&gt;&lt;/msub&gt;&lt;mo separator=&quot;true&quot;&gt;,&lt;/mo&gt;&lt;mo stretchy=&quot;false&quot;&gt;(&lt;/mo&gt;&lt;msub&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;mn&gt;2&lt;/mn&gt;&lt;/msub&gt;&lt;mo separator=&quot;true&quot;&gt;,&lt;/mo&gt;&lt;msub&gt;&lt;mi&gt;r&lt;/mi&gt;&lt;mn&gt;2&lt;/mn&gt;&lt;/msub&gt;&lt;mo stretchy=&quot;false&quot;&gt;)&lt;/mo&gt;&lt;mo stretchy=&quot;false&quot;&gt;)&lt;/mo&gt;&lt;/mrow&gt;&lt;/mstyle&gt;&lt;/mtd&gt;&lt;mtd&gt;&lt;mstyle scriptlevel=&quot;0&quot; displaystyle=&quot;false&quot;&gt;&lt;mrow&gt;&lt;mtext&gt;if &lt;/mtext&gt;&lt;mi&gt;c&lt;/mi&gt;&lt;msub&gt;&lt;mi&gt;C&lt;/mi&gt;&lt;mn&gt;2&lt;/mn&gt;&lt;/msub&gt;&lt;mo&gt;&gt;&lt;/mo&gt;&lt;mi&gt;C&lt;/mi&gt;&lt;msub&gt;&lt;mi&gt;C&lt;/mi&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;/msub&gt;&lt;/mrow&gt;&lt;/mstyle&gt;&lt;/mtd&gt;&lt;/mtr&gt;&lt;mtr&gt;&lt;mtd&gt;&lt;mstyle scriptlevel=&quot;0&quot; displaystyle=&quot;false&quot;&gt;&lt;mrow&gt;&lt;mtext&gt; &lt;/mtext&gt;&lt;mo stretchy=&quot;false&quot;&gt;(&lt;/mo&gt;&lt;mi&gt;c&lt;/mi&gt;&lt;msub&gt;&lt;mi&gt;C&lt;/mi&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;/msub&gt;&lt;mo&gt;⊔&lt;/mo&gt;&lt;mi&gt;c&lt;/mi&gt;&lt;msub&gt;&lt;mi&gt;C&lt;/mi&gt;&lt;mn&gt;2&lt;/mn&gt;&lt;/msub&gt;&lt;mo separator=&quot;true&quot;&gt;,&lt;/mo&gt;&lt;mo stretchy=&quot;false&quot;&gt;(&lt;/mo&gt;&lt;msub&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;/msub&gt;&lt;mo&gt;⊔&lt;/mo&gt;&lt;msub&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;mn&gt;2&lt;/mn&gt;&lt;/msub&gt;&lt;mo separator=&quot;true&quot;&gt;,&lt;/mo&gt;&lt;msub&gt;&lt;mi&gt;b&lt;/mi&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;/msub&gt;&lt;mo&gt;⊔&lt;/mo&gt;&lt;msub&gt;&lt;mi&gt;b&lt;/mi&gt;&lt;mn&gt;2&lt;/mn&gt;&lt;/msub&gt;&lt;mo stretchy=&quot;false&quot;&gt;)&lt;/mo&gt;&lt;mo stretchy=&quot;false&quot;&gt;)&lt;/mo&gt;&lt;/mrow&gt;&lt;/mstyle&gt;&lt;/mtd&gt;&lt;mtd&gt;&lt;mstyle scriptlevel=&quot;0&quot; displaystyle=&quot;false&quot;&gt;&lt;mrow&gt;&lt;mi&gt;o&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;h&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;r&lt;/mi&gt;&lt;mi&gt;w&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;s&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;/mrow&gt;&lt;/mstyle&gt;&lt;/mtd&gt;&lt;/mtr&gt;&lt;/mtable&gt;&lt;/mrow&gt;&lt;/mrow&gt;&lt;annotation encoding=&quot;application/x-tex&quot;&gt;(cC_1, (a_1, r_1)) \sqcup (cC_2, (a_2, r_2)) =
+
+#### 🧯 Fix: Explicit Causality
+This brings us back to the main point of this post: we need to *explicitly* include information in our OR-set semilattice ... in this case, to support convergent expiry of state. Specifically we can use a nested semilattice to track a **causal context**—e.g. a **version vector**—and use that to determine when it&apos;s safe to expire items:
+
+- ✅ Expire a tombstone only after every node is guaranteed to know about it.
+
+Note that this constraint breaks the cycle in the diagram of non-convergence above! It forbids the edges `S2 -&gt; S3`, `S5 -&gt; S6` and `S8 -&gt; S0`: each of those edges represents a tombstone being expired when at least one node is in a green `+` state and doesn&apos;t believe the tombstone exists!
+
+We enforce the constraint by making the OR-Set semilattice a [lexical product](https://en.wikipedia.org/wiki/Lexicographic_order) semilattice: 
+
+```
+(causalContext, (adds, removes))
+```
+
+Unlike our previous *free product*, the `merge` operator for the lexical product only looks at its second field `(adds, removes)` when breaking ties on the first field `causalContext`:
+
+$$
+(cC_1, (a_1, r_1)) \sqcup (cC_2, (a_2, r_2)) =
 \begin{cases}
-  (cC_1, (a_1, r_1)) &amp;#x26; \text{if } cC_1 &gt; cC_2 \\\
-  (cC_2, (a_2, r_2)) &amp;#x26; \text{if } cC_2 &gt; CC_1 \\\
-    (cC_1 \sqcup cC_2, (a_1 \sqcup a_2, b_1 \sqcup b_2)) &amp;#x26; otherwise
-\end{cases}&lt;/annotation&gt;&lt;/semantics&gt;&lt;/math&gt;&lt;/span&gt;&lt;span class=&quot;katex-html&quot; aria-hidden=&quot;true&quot;&gt;&lt;span class=&quot;base&quot;&gt;&lt;span class=&quot;strut&quot; style=&quot;height:1em;vertical-align:-0.25em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mopen&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.07153em;&quot;&gt;C&lt;/span&gt;&lt;span class=&quot;msupsub&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.3011em;&quot;&gt;&lt;span style=&quot;top:-2.55em;margin-left:-0.0715em;margin-right:0.05em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:2.7em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;sizing reset-size6 size3 mtight&quot;&gt;&lt;span class=&quot;mord mtight&quot;&gt;1&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.15em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mpunct&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.1667em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mopen&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;msupsub&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.3011em;&quot;&gt;&lt;span style=&quot;top:-2.55em;margin-left:0em;margin-right:0.05em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:2.7em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;sizing reset-size6 size3 mtight&quot;&gt;&lt;span class=&quot;mord mtight&quot;&gt;1&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.15em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mpunct&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.1667em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.02778em;&quot;&gt;r&lt;/span&gt;&lt;span class=&quot;msupsub&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.3011em;&quot;&gt;&lt;span style=&quot;top:-2.55em;margin-left:-0.0278em;margin-right:0.05em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:2.7em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;sizing reset-size6 size3 mtight&quot;&gt;&lt;span class=&quot;mord mtight&quot;&gt;1&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.15em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mclose&quot;&gt;))&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2222em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mbin&quot;&gt;⊔&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2222em;&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;base&quot;&gt;&lt;span class=&quot;strut&quot; style=&quot;height:1em;vertical-align:-0.25em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mopen&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.07153em;&quot;&gt;C&lt;/span&gt;&lt;span class=&quot;msupsub&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.3011em;&quot;&gt;&lt;span style=&quot;top:-2.55em;margin-left:-0.0715em;margin-right:0.05em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:2.7em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;sizing reset-size6 size3 mtight&quot;&gt;&lt;span class=&quot;mord mtight&quot;&gt;2&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.15em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mpunct&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.1667em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mopen&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;msupsub&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.3011em;&quot;&gt;&lt;span style=&quot;top:-2.55em;margin-left:0em;margin-right:0.05em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:2.7em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;sizing reset-size6 size3 mtight&quot;&gt;&lt;span class=&quot;mord mtight&quot;&gt;2&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.15em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mpunct&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.1667em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.02778em;&quot;&gt;r&lt;/span&gt;&lt;span class=&quot;msupsub&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.3011em;&quot;&gt;&lt;span style=&quot;top:-2.55em;margin-left:-0.0278em;margin-right:0.05em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:2.7em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;sizing reset-size6 size3 mtight&quot;&gt;&lt;span class=&quot;mord mtight&quot;&gt;2&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.15em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mclose&quot;&gt;))&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2778em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mrel&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2778em;&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;base&quot;&gt;&lt;span class=&quot;strut&quot; style=&quot;height:4.32em;vertical-align:-1.91em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;minner&quot;&gt;&lt;span class=&quot;mopen&quot;&gt;&lt;span class=&quot;delimsizing mult&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:2.35em;&quot;&gt;&lt;span style=&quot;top:-2.2em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:3.15em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;delimsizinginner delim-size4&quot;&gt;&lt;span&gt;⎩&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&quot;top:-2.192em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:3.15em;&quot;&gt;&lt;/span&gt;&lt;span style=&quot;height:0.316em;width:0.8889em;&quot;&gt;&lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;0.8889em&quot; height=&quot;0.316em&quot; style=&quot;width:0.8889em&quot; viewBox=&quot;0 0 888.89 316&quot; preserveAspectRatio=&quot;xMinYMin&quot;&gt;&lt;path d=&quot;M384 0 H504 V316 H384z M384 0 H504 V316 H384z&quot;&gt;&lt;/path&gt;&lt;/svg&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&quot;top:-3.15em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:3.15em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;delimsizinginner delim-size4&quot;&gt;&lt;span&gt;⎨&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&quot;top:-4.292em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:3.15em;&quot;&gt;&lt;/span&gt;&lt;span style=&quot;height:0.316em;width:0.8889em;&quot;&gt;&lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;0.8889em&quot; height=&quot;0.316em&quot; style=&quot;width:0.8889em&quot; viewBox=&quot;0 0 888.89 316&quot; preserveAspectRatio=&quot;xMinYMin&quot;&gt;&lt;path d=&quot;M384 0 H504 V316 H384z M384 0 H504 V316 H384z&quot;&gt;&lt;/path&gt;&lt;/svg&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&quot;top:-4.6em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:3.15em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;delimsizinginner delim-size4&quot;&gt;&lt;span&gt;⎧&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:1.85em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mtable&quot;&gt;&lt;span class=&quot;col-align-l&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:2.41em;&quot;&gt;&lt;span style=&quot;top:-4.41em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:3.008em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mopen&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.07153em;&quot;&gt;C&lt;/span&gt;&lt;span class=&quot;msupsub&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.3011em;&quot;&gt;&lt;span style=&quot;top:-2.55em;margin-left:-0.0715em;margin-right:0.05em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:2.7em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;sizing reset-size6 size3 mtight&quot;&gt;&lt;span class=&quot;mord mtight&quot;&gt;1&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.15em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mpunct&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.1667em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mopen&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;msupsub&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.3011em;&quot;&gt;&lt;span style=&quot;top:-2.55em;margin-left:0em;margin-right:0.05em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:2.7em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;sizing reset-size6 size3 mtight&quot;&gt;&lt;span class=&quot;mord mtight&quot;&gt;1&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.15em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mpunct&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.1667em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.02778em;&quot;&gt;r&lt;/span&gt;&lt;span class=&quot;msupsub&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.3011em;&quot;&gt;&lt;span style=&quot;top:-2.55em;margin-left:-0.0278em;margin-right:0.05em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:2.7em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;sizing reset-size6 size3 mtight&quot;&gt;&lt;span class=&quot;mord mtight&quot;&gt;1&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.15em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mclose&quot;&gt;))&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&quot;top:-2.97em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:3.008em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mspace&quot;&gt; &lt;/span&gt;&lt;span class=&quot;mopen&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.07153em;&quot;&gt;C&lt;/span&gt;&lt;span class=&quot;msupsub&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.3011em;&quot;&gt;&lt;span style=&quot;top:-2.55em;margin-left:-0.0715em;margin-right:0.05em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:2.7em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;sizing reset-size6 size3 mtight&quot;&gt;&lt;span class=&quot;mord mtight&quot;&gt;2&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.15em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mpunct&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.1667em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mopen&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;msupsub&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.3011em;&quot;&gt;&lt;span style=&quot;top:-2.55em;margin-left:0em;margin-right:0.05em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:2.7em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;sizing reset-size6 size3 mtight&quot;&gt;&lt;span class=&quot;mord mtight&quot;&gt;2&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.15em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mpunct&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.1667em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.02778em;&quot;&gt;r&lt;/span&gt;&lt;span class=&quot;msupsub&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.3011em;&quot;&gt;&lt;span style=&quot;top:-2.55em;margin-left:-0.0278em;margin-right:0.05em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:2.7em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;sizing reset-size6 size3 mtight&quot;&gt;&lt;span class=&quot;mord mtight&quot;&gt;2&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.15em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mclose&quot;&gt;))&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&quot;top:-1.53em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:3.008em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mspace&quot;&gt; &lt;/span&gt;&lt;span class=&quot;mopen&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.07153em;&quot;&gt;C&lt;/span&gt;&lt;span class=&quot;msupsub&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.3011em;&quot;&gt;&lt;span style=&quot;top:-2.55em;margin-left:-0.0715em;margin-right:0.05em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:2.7em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;sizing reset-size6 size3 mtight&quot;&gt;&lt;span class=&quot;mord mtight&quot;&gt;1&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.15em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2222em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mbin&quot;&gt;⊔&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2222em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.07153em;&quot;&gt;C&lt;/span&gt;&lt;span class=&quot;msupsub&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.3011em;&quot;&gt;&lt;span style=&quot;top:-2.55em;margin-left:-0.0715em;margin-right:0.05em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:2.7em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;sizing reset-size6 size3 mtight&quot;&gt;&lt;span class=&quot;mord mtight&quot;&gt;2&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.15em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mpunct&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.1667em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mopen&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;msupsub&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.3011em;&quot;&gt;&lt;span style=&quot;top:-2.55em;margin-left:0em;margin-right:0.05em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:2.7em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;sizing reset-size6 size3 mtight&quot;&gt;&lt;span class=&quot;mord mtight&quot;&gt;1&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.15em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2222em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mbin&quot;&gt;⊔&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2222em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;msupsub&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.3011em;&quot;&gt;&lt;span style=&quot;top:-2.55em;margin-left:0em;margin-right:0.05em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:2.7em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;sizing reset-size6 size3 mtight&quot;&gt;&lt;span class=&quot;mord mtight&quot;&gt;2&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.15em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mpunct&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.1667em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;msupsub&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.3011em;&quot;&gt;&lt;span style=&quot;top:-2.55em;margin-left:0em;margin-right:0.05em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:2.7em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;sizing reset-size6 size3 mtight&quot;&gt;&lt;span class=&quot;mord mtight&quot;&gt;1&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.15em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2222em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mbin&quot;&gt;⊔&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2222em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;msupsub&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.3011em;&quot;&gt;&lt;span style=&quot;top:-2.55em;margin-left:0em;margin-right:0.05em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:2.7em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;sizing reset-size6 size3 mtight&quot;&gt;&lt;span class=&quot;mord mtight&quot;&gt;2&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.15em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mclose&quot;&gt;))&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:1.91em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;arraycolsep&quot; style=&quot;width:1em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;col-align-l&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:2.41em;&quot;&gt;&lt;span style=&quot;top:-4.41em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:3.008em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord text&quot;&gt;&lt;span class=&quot;mord&quot;&gt;if &lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.07153em;&quot;&gt;C&lt;/span&gt;&lt;span class=&quot;msupsub&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.3011em;&quot;&gt;&lt;span style=&quot;top:-2.55em;margin-left:-0.0715em;margin-right:0.05em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:2.7em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;sizing reset-size6 size3 mtight&quot;&gt;&lt;span class=&quot;mord mtight&quot;&gt;1&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.15em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2778em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mrel&quot;&gt;&gt;&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2778em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.07153em;&quot;&gt;C&lt;/span&gt;&lt;span class=&quot;msupsub&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.3011em;&quot;&gt;&lt;span style=&quot;top:-2.55em;margin-left:-0.0715em;margin-right:0.05em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:2.7em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;sizing reset-size6 size3 mtight&quot;&gt;&lt;span class=&quot;mord mtight&quot;&gt;2&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.15em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&quot;top:-2.97em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:3.008em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord text&quot;&gt;&lt;span class=&quot;mord&quot;&gt;if &lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;c&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.07153em;&quot;&gt;C&lt;/span&gt;&lt;span class=&quot;msupsub&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.3011em;&quot;&gt;&lt;span style=&quot;top:-2.55em;margin-left:-0.0715em;margin-right:0.05em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:2.7em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;sizing reset-size6 size3 mtight&quot;&gt;&lt;span class=&quot;mord mtight&quot;&gt;2&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.15em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2778em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mrel&quot;&gt;&gt;&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2778em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.07153em;&quot;&gt;C&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.07153em;&quot;&gt;C&lt;/span&gt;&lt;span class=&quot;msupsub&quot;&gt;&lt;span class=&quot;vlist-t vlist-t2&quot;&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.3011em;&quot;&gt;&lt;span style=&quot;top:-2.55em;margin-left:-0.0715em;margin-right:0.05em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:2.7em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;sizing reset-size6 size3 mtight&quot;&gt;&lt;span class=&quot;mord mtight&quot;&gt;1&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:0.15em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&quot;top:-1.53em;&quot;&gt;&lt;span class=&quot;pstrut&quot; style=&quot;height:3.008em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord&quot;&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;o&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;t&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;h&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.02778em;&quot;&gt;er&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.02691em;&quot;&gt;w&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;se&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-s&quot;&gt;​&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;vlist-r&quot;&gt;&lt;span class=&quot;vlist&quot; style=&quot;height:1.91em;&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;mclose nulldelimiter&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/div&gt;
-&lt;p&gt;Note that the &lt;code class=&quot;language-text&quot;&gt;causalContext&lt;/code&gt; is itself another semilattice! It tracks which operations have been observed system-wide. This tracking can be stale, but it is always a conservative lower bound. We can safely expire data from our OR set if it is older than our &lt;code class=&quot;language-text&quot;&gt;causalContext&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;There are different implementations for &lt;code class=&quot;language-text&quot;&gt;causalContext&lt;/code&gt;, including &lt;em&gt;version vectors&lt;/em&gt; or &lt;em&gt;causal graphs&lt;/em&gt;. We&apos;ll work with version vectors since they&apos;re the most common.&lt;/p&gt;
+  (cC_1, (a_1, r_1)) &amp; \text{if } cC_1 &gt; cC_2 \\\
+  (cC_2, (a_2, r_2)) &amp; \text{if } cC_2 &gt; CC_1 \\\
+    (cC_1 \sqcup cC_2, (a_1 \sqcup a_2, b_1 \sqcup b_2)) &amp; otherwise
+\end{cases}
+$$
+
+
+Note that the `causalContext` is itself another semilattice! It tracks which operations have been observed system-wide. This tracking can be stale, but it is always a conservative lower bound. We can safely expire data from our OR set if it is older than our `causalContext`.
+
+There are different implementations for `causalContext`, including *version vectors* or *causal graphs*. We&apos;ll work with version vectors since they&apos;re the most common.
+
 &lt;details&gt;
 &lt;summary&gt;Click to learn about version vectors.&lt;/summary&gt;
-&lt;p&gt;We begin by ensuring that each node maintains a &lt;em&gt;local clock&lt;/em&gt; -- a counter that increments by 1 each time the node applies an operation or sends a message. (Note that a counter is also a semilattice, where the domain &lt;span class=&quot;math math-inline&quot;&gt;&lt;span class=&quot;katex&quot;&gt;&lt;span class=&quot;katex-mathml&quot;&gt;&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;semantics&gt;&lt;mrow&gt;&lt;mi&gt;S&lt;/mi&gt;&lt;mo&gt;=&lt;/mo&gt;&lt;mi mathvariant=&quot;double-struck&quot;&gt;N&lt;/mi&gt;&lt;/mrow&gt;&lt;annotation encoding=&quot;application/x-tex&quot;&gt;S = \mathbb{N}&lt;/annotation&gt;&lt;/semantics&gt;&lt;/math&gt;&lt;/span&gt;&lt;span class=&quot;katex-html&quot; aria-hidden=&quot;true&quot;&gt;&lt;span class=&quot;base&quot;&gt;&lt;span class=&quot;strut&quot; style=&quot;height:0.6833em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.05764em;&quot;&gt;S&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2778em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mrel&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mspace&quot; style=&quot;margin-right:0.2778em;&quot;&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;base&quot;&gt;&lt;span class=&quot;strut&quot; style=&quot;height:0.6889em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord mathbb&quot;&gt;N&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt; is the natural numbers 0, 1, 2, ..., and the &lt;code class=&quot;language-text&quot;&gt;merge&lt;/code&gt; function is &lt;code class=&quot;language-text&quot;&gt;max&lt;/code&gt;.)
+
+We begin by ensuring that each node maintains a *local clock* -- a counter that increments by 1 each time the node applies an operation or sends a message. (Note that a counter is also a semilattice, where the domain $S = \mathbb{N}$ is the natural numbers 0, 1, 2, ..., and the `merge` function is `max`.)
 &lt;br /&gt;
-&lt;br /&gt;&lt;/p&gt;
-&lt;p&gt;A &lt;em&gt;version vector&lt;/em&gt; is a map from &lt;code class=&quot;language-text&quot;&gt;nodeId&lt;/code&gt;s to values from a counter lattice: it records the highest clock value a node has heard of &lt;em&gt;from each other node&lt;/em&gt;. This map is itself a composite semilattice! Specifically:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;The domain &lt;span class=&quot;math math-inline&quot;&gt;&lt;span class=&quot;katex&quot;&gt;&lt;span class=&quot;katex-mathml&quot;&gt;&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;semantics&gt;&lt;mrow&gt;&lt;mi&gt;S&lt;/mi&gt;&lt;/mrow&gt;&lt;annotation encoding=&quot;application/x-tex&quot;&gt;S&lt;/annotation&gt;&lt;/semantics&gt;&lt;/math&gt;&lt;/span&gt;&lt;span class=&quot;katex-html&quot; aria-hidden=&quot;true&quot;&gt;&lt;span class=&quot;base&quot;&gt;&lt;span class=&quot;strut&quot; style=&quot;height:0.6833em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.05764em;&quot;&gt;S&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt; is a map from &lt;code class=&quot;language-text&quot;&gt;nodeId&lt;/code&gt; (the key) to a value from the lattice &lt;span class=&quot;math math-inline&quot;&gt;&lt;span class=&quot;katex&quot;&gt;&lt;span class=&quot;katex-mathml&quot;&gt;&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;semantics&gt;&lt;mrow&gt;&lt;mo stretchy=&quot;false&quot;&gt;(&lt;/mo&gt;&lt;mi mathvariant=&quot;double-struck&quot;&gt;N&lt;/mi&gt;&lt;mo separator=&quot;true&quot;&gt;,&lt;/mo&gt;&lt;/mrow&gt;&lt;annotation encoding=&quot;application/x-tex&quot;&gt;(\mathbb{N},&lt;/annotation&gt;&lt;/semantics&gt;&lt;/math&gt;&lt;/span&gt;&lt;span class=&quot;katex-html&quot; aria-hidden=&quot;true&quot;&gt;&lt;span class=&quot;base&quot;&gt;&lt;span class=&quot;strut&quot; style=&quot;height:1em;vertical-align:-0.25em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mopen&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mord mathbb&quot;&gt;N&lt;/span&gt;&lt;span class=&quot;mpunct&quot;&gt;,&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt; &lt;code class=&quot;language-text&quot;&gt;max&lt;/code&gt;&lt;span class=&quot;math math-inline&quot;&gt;&lt;span class=&quot;katex&quot;&gt;&lt;span class=&quot;katex-mathml&quot;&gt;&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;semantics&gt;&lt;mrow&gt;&lt;mo stretchy=&quot;false&quot;&gt;)&lt;/mo&gt;&lt;/mrow&gt;&lt;annotation encoding=&quot;application/x-tex&quot;&gt;)&lt;/annotation&gt;&lt;/semantics&gt;&lt;/math&gt;&lt;/span&gt;&lt;span class=&quot;katex-html&quot; aria-hidden=&quot;true&quot;&gt;&lt;span class=&quot;base&quot;&gt;&lt;span class=&quot;strut&quot; style=&quot;height:1em;vertical-align:-0.25em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mclose&quot;&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt; (the value)&lt;/li&gt;
-&lt;li&gt;The &lt;code class=&quot;language-text&quot;&gt;merge&lt;/code&gt; function is simply key-wise application of the value lattice &lt;code class=&quot;language-text&quot;&gt;merge&lt;/code&gt; function (i.e., &lt;code class=&quot;language-text&quot;&gt;max&lt;/code&gt;). If a key is missing from one input to &lt;code class=&quot;language-text&quot;&gt;merge&lt;/code&gt;, we simply take its value from the other input.&lt;/li&gt;
-&lt;/ul&gt;
+&lt;br /&gt;
+
+A *version vector* is a map from `nodeId`s to values from a counter lattice: it records the highest clock value a node has heard of *from each other node*. This map is itself a composite semilattice! Specifically:
+
+- The domain $S$ is a map from `nodeId` (the key) to a value from the lattice $(\mathbb{N},$ `max`$)$ (the value)
+- The `merge` function is simply key-wise application of the value lattice `merge` function (i.e., `max`). If a key is missing from one input to `merge`, we simply take its value from the other input.
 &lt;/details&gt;
-&lt;p&gt;Notice what we did here: we formed a &lt;em&gt;composite&lt;/em&gt; semilattice &lt;code class=&quot;language-text&quot;&gt;(causalContext, (adds, removes))&lt;/code&gt; out of very simple semilattice building blocks.
-The &lt;code class=&quot;language-text&quot;&gt;merge&lt;/code&gt; functions of these lattices effectively invoke the encapsulated sub-lattice &lt;code class=&quot;language-text&quot;&gt;merge&lt;/code&gt; functions recursively.&lt;/p&gt;
-&lt;p&gt;&lt;em&gt;It really is lattices all the way down!&lt;/em&gt;&lt;/p&gt;
-&lt;h4&gt;Using Version Vectors for Safe Expiration&lt;/h4&gt;
-&lt;p&gt;To use our version vectors, we will make a few small changes to our OR-set design:&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;Each node locally maintains an overall version vector containing the &lt;code class=&quot;language-text&quot;&gt;merge&lt;/code&gt; of &lt;em&gt;all&lt;/em&gt; version vectors seen so far: this is typically called a &lt;em&gt;vector clock&lt;/em&gt;. It represents a high-watermark of our local knowledge of global progress.&lt;/li&gt;
-&lt;li&gt;When an item is deleted, its tombstone timestamp is set to the local vector clock.&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;We can now do expiration safely: tombstones are only expired if their timestamp is lower in the partial order than the local &lt;em&gt;vector clock&lt;/em&gt;: if so, we can be sure that &lt;em&gt;every other node also knows about this tombstone, and will eventually expire it as well&lt;/em&gt;.&lt;/p&gt;
-&lt;h2&gt;&lt;a id=&quot;op-based&quot;&gt;&lt;/a&gt;A Note on Op-Based CRDTS&lt;/h2&gt;
-&lt;p&gt;As mentioned above, many CRDT fans like to talk about two &quot;different&quot; kinds of CRDTs: normal (&quot;state-based&quot;) semilattice CRDTs, and something called &quot;op-based&quot; CRDTs. &lt;em&gt;I&apos;m here to tell you that correct op-based CRDTs are also semilattices; the distinction is not fundamental.&lt;/em&gt;&lt;/p&gt;
-&lt;p&gt;An &quot;op-based&quot; CRDT is just a particular class of semilattice. The state of an op-based CRDT represents a &lt;em&gt;partially-ordered log of operations&lt;/em&gt; (opaque commands). The CRDT&apos;s job is to ensure that the partially-ordered log is consistent across nodes.&lt;/p&gt;
-&lt;p&gt;The partial order among ops can be captured by each site tagging every new op it generates with a &lt;code class=&quot;language-text&quot;&gt;causalContext&lt;/code&gt; value. This ensures (1) that recipients of ops from node &lt;span class=&quot;math math-inline&quot;&gt;&lt;span class=&quot;katex&quot;&gt;&lt;span class=&quot;katex-mathml&quot;&gt;&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;semantics&gt;&lt;mrow&gt;&lt;mi&gt;n&lt;/mi&gt;&lt;/mrow&gt;&lt;annotation encoding=&quot;application/x-tex&quot;&gt;n&lt;/annotation&gt;&lt;/semantics&gt;&lt;/math&gt;&lt;/span&gt;&lt;span class=&quot;katex-html&quot; aria-hidden=&quot;true&quot;&gt;&lt;span class=&quot;base&quot;&gt;&lt;span class=&quot;strut&quot; style=&quot;height:0.4306em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;n&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt; will have them ordered in the same way as &lt;span class=&quot;math math-inline&quot;&gt;&lt;span class=&quot;katex&quot;&gt;&lt;span class=&quot;katex-mathml&quot;&gt;&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;semantics&gt;&lt;mrow&gt;&lt;mi&gt;n&lt;/mi&gt;&lt;/mrow&gt;&lt;annotation encoding=&quot;application/x-tex&quot;&gt;n&lt;/annotation&gt;&lt;/semantics&gt;&lt;/math&gt;&lt;/span&gt;&lt;span class=&quot;katex-html&quot; aria-hidden=&quot;true&quot;&gt;&lt;span class=&quot;base&quot;&gt;&lt;span class=&quot;strut&quot; style=&quot;height:0.4306em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot;&gt;n&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt; did, and (2) operations &lt;em&gt;across&lt;/em&gt; nodes are causally ordered, via the &lt;code class=&quot;language-text&quot;&gt;causalContext&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;Specifically, the state &lt;span class=&quot;math math-inline&quot;&gt;&lt;span class=&quot;katex&quot;&gt;&lt;span class=&quot;katex-mathml&quot;&gt;&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;semantics&gt;&lt;mrow&gt;&lt;mi&gt;S&lt;/mi&gt;&lt;/mrow&gt;&lt;annotation encoding=&quot;application/x-tex&quot;&gt;S&lt;/annotation&gt;&lt;/semantics&gt;&lt;/math&gt;&lt;/span&gt;&lt;span class=&quot;katex-html&quot; aria-hidden=&quot;true&quot;&gt;&lt;span class=&quot;base&quot;&gt;&lt;span class=&quot;strut&quot; style=&quot;height:0.6833em;&quot;&gt;&lt;/span&gt;&lt;span class=&quot;mord mathnormal&quot; style=&quot;margin-right:0.05764em;&quot;&gt;S&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt; of an op-based CRDT can simply be a &lt;em&gt;set&lt;/em&gt; of &lt;code class=&quot;language-text&quot;&gt;(causalContext, op)&lt;/code&gt; tuples, with simple set-union as the &lt;code class=&quot;language-text&quot;&gt;merge&lt;/code&gt; function. The &lt;code class=&quot;language-text&quot;&gt;causalContext&lt;/code&gt; is ignored by the lattice &lt;code class=&quot;language-text&quot;&gt;merge&lt;/code&gt;, but carried along to preserve a consistent partial order of the log. One typical &lt;code class=&quot;language-text&quot;&gt;causalContext&lt;/code&gt; implementation is to use vector clock timestamps, with each node incrementing its entry in the vector clock for every op and message.&lt;/p&gt;
-&lt;p&gt;That&apos;s really all there is to an &quot;op-based&quot; CRDT: it&apos;s a grow-only set of causally-stamped commands.&lt;/p&gt;
-&lt;p&gt;Typically, op-based CRDT designs assume that the log at each site is &quot;played&quot; (eagerly or lazily), by executing the ops in their causal partial order to materialize the local state. This is only required to support a &quot;read&quot; operation, and hence is effectively outside the scope of the CRDT math. Because causal order is only a partial order, different nodes could &quot;play&quot; some ops in different orders. As a result, op-based CRDT designs typically require the ops themselves to be mutually commutative.&lt;/p&gt;
-&lt;p&gt;If an op-based CRDT has quiesced and propagated to every node, and the ops themselves are mutually commutative, then every node can &quot;play&quot; the log in some total order that respects the partial order, and all nodes will end up with a convergent outcome.&lt;/p&gt;
-&lt;p&gt;To summarize: an op-based CRDT is still just a simple set semilattice! The only wrinkles are:&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;The items in the op-based CRDT set are stamped with causalContext to enable causally-ordered replay&lt;/li&gt;
-&lt;li&gt;For the ops to be meaningful at replay time, ops across sites should be commutative.&lt;/li&gt;
-&lt;/ol&gt;
-&lt;h2&gt;🪜 &lt;a id=&quot;building-on-an-existing-turtle&quot;&gt;&lt;/a&gt;You Can Build on a Turtle — But Know What It Carries&lt;/h2&gt;
-&lt;p&gt;Sometimes, a system&apos;s lower layers provide additional guarantees that allow us to skip some details and rely on a turtle below us.&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;Example: If your network guarantees causal delivery, you can safely drop explicit causal tracking in your CRDT.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;But beware: your CRDT is now resting on that turtle. If the network is not in fact behaving like a causal semilattice, your convergence proofs go out the window!&lt;/p&gt;
-&lt;h2&gt;📌 Takeaways&lt;/h2&gt;
-&lt;ul&gt;
-&lt;li&gt;✅ Every CRDT must be a (correct) semilattice&lt;/li&gt;
-&lt;li&gt;✅ Order comparisons must respect the partial order induced by &lt;code class=&quot;language-text&quot;&gt;merge&lt;/code&gt;.&lt;/li&gt;
-&lt;li&gt;✅ Model all necessary assumptions &lt;em&gt;inside&lt;/em&gt; the lattice.&lt;/li&gt;
-&lt;li&gt;✅ Build on trusted turtles only when you know exactly what they can carry safely.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;When you do all that?&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;&lt;strong&gt;It&apos;s semilattices all the way down&lt;/strong&gt;.&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;That&apos;s math you can build on.&lt;/p&gt;</content:encoded></item><item><title><![CDATA[A Run of CRDT Posts]]></title><description><![CDATA[Over the next few days, I'm going to post a number of observations about CRDTs: Convergent Conflict-free Replicated Data Types. These are…]]></description><link>https://jhellerstein.github.io/blog/crdt-intro/</link><guid isPermaLink="false">https://jhellerstein.github.io/blog/crdt-intro/</guid><pubDate>Wed, 21 May 2025 00:00:00 GMT</pubDate><content:encoded>&lt;p&gt;Over the next few days, I&apos;m going to post a number of observations about &lt;em&gt;CRDTs&lt;/em&gt;: &lt;del&gt;Convergent&lt;/del&gt; Conflict-free Replicated Data Types. These are data structures that aspire to help us with &lt;em&gt;coordination-free distributed programming&lt;/em&gt;, a topic that interests me a lot. How can developers (or languages/compilers) deliver distributed programs that are &lt;em&gt;safe&lt;/em&gt; or &lt;em&gt;correct&lt;/em&gt; in important ways, without employing expensive mechanisms for &lt;em&gt;coordination&lt;/em&gt; that make the global cloud run as slowly as a sequential computer?&lt;/p&gt;
-&lt;p&gt;In a nutshell, my take is that CRDTs are built on an elegant kernel, but offer a leaky abstraction that misleads a lot of developers -- and researchers. Understanding the ideas and problems of CRDTs is a great way to walk into this domain. I&apos;ll give an overview in this post, and the series of posts will go futher.&lt;/p&gt;
-&lt;h2&gt;CRDTs: Pros &amp;#x26; Cons (Lattices &amp;#x26; Lettuces?)&lt;/h2&gt;
-&lt;p&gt;First, the elegant part, which I find very appealing:&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;Deep Roots&lt;/strong&gt;: CRDTs are based on &lt;em&gt;semilattices&lt;/em&gt;, which are simple, abstract mathematical structures that have a &lt;code class=&quot;language-text&quot;&gt;join&lt;/code&gt; operator that is &lt;em&gt;associative, commutative, and idempotent&lt;/em&gt;. The idea to use this for replicated data types goes back at least to work by &lt;a href=&quot;https://gsd.di.uminho.pt/members/cbm/ps/scadt3.pdf&quot;&gt;Baquero and Moura in 1997&lt;/a&gt;. They deserve more citations for this! (HT &lt;a href=&quot;https://www.linkedin.com/in/conorpower23&quot;&gt;Conor Power&lt;/a&gt; for educating me about this; I believe he learned about it from &lt;a href=&quot;https://www.lip6.fr/actualite/personnes-fiche.php?ident=P1450&quot;&gt;Marc Shapiro&lt;/a&gt; of CRDT fame.)&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;Moar Algebra!&lt;/strong&gt;: The use of modern algebra as a building block for correctness in distributed systems and database systems is a wonderful direction for the field, and we&apos;re seeing more and more of this work in recent years. (See for example the &lt;a href=&quot;https://simons.berkeley.edu/workshops/logic-algebra-query-evaluation#simons-tabs&quot;&gt;Simons&apos; Institute gathering&lt;/a&gt; from a couple years back.) This semilattice/CRDT line of work was early, elegant and easy to understand. Lovely stuff.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;Unfortunately there are few key problems that arise in common discussion of CRDTs:&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;Drifting from Correctness&lt;/strong&gt;. As people walk away from the semilattice foundation, they can lose their moorings in correct math. This is entirely avoidable, and most experts know how to avoid bugs here, but the discussion often gets unnecessarily subtle ... in ways that confuse people.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;Unsafe to Use&lt;/strong&gt;. The algebra of semilattices has a single operator: &lt;code class=&quot;language-text&quot;&gt;join&lt;/code&gt;. Notably it doesn&apos;t have any operator that corresponds to &lt;em&gt;read&lt;/em&gt; or &lt;em&gt;inspect&lt;/em&gt;. In fact, CRDTs as described in the literature provide &lt;em&gt;absolutely no guarantees to readers&lt;/em&gt;, so a &quot;proper&quot; CRDT implementation should &lt;em&gt;not allow reads!&lt;/em&gt; Which is to say a correct CRDT is an entirely useless theoretical object. Yet people use CRDTs, inevitably reading/inspecting them in unsafe/non-deterministic ways. Worse, many developers &lt;em&gt;think&lt;/em&gt; they&apos;re getting useful correctness guarantees from CRDTs, which they are not! The only safe thing to do with a CRDT is to leave it unexamined.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;&lt;strong&gt;Programmability Issues&lt;/strong&gt;. As &lt;em&gt;unreadable data types&lt;/em&gt;, CRDTs can&apos;t be composed safely into useful programs. How in fact can we use them?  Ideally we&apos;d like a &lt;em&gt;language&lt;/em&gt; that allows correct composition of CRDT building blocks. This is something folks have looked at in DSLs like &lt;a href=&quot;https://dl.acm.org/doi/abs/10.1145/2502323.2502326&quot;&gt;LVars&lt;/a&gt;, &lt;a href=&quot;https://dl.acm.org/doi/abs/10.1145/2391229.2391230&quot;&gt;Bloom^L&lt;/a&gt;, &lt;a href=&quot;https://dl.acm.org/doi/abs/10.1145/2790449.2790525&quot;&gt;Lasp&lt;/a&gt; and &lt;a href=&quot;https://par.nsf.gov/biblio/10095545&quot;&gt;Gallifrey&lt;/a&gt;. There&apos;s still work to do to deliver those ideas to developers in a familiar frame, which is one goal of our &lt;a href=&quot;https://hydro.run&quot;&gt;Hydro&lt;/a&gt; library for Rust.&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ol&gt;
-&lt;h3&gt;My Take&lt;/h3&gt;
-&lt;p&gt;So ... it&apos;s true that I&apos;m not a huge fan of CRDTs as a practical matter. But I think the core ideas are quite lovely, and the pitfalls are interesting and really educational for developers and researchers to understand.  Much respect to the folks who&apos;ve worked on CRDTs over the years, both for what they&apos;ve invented and the challenges they&apos;ve raised.&lt;/p&gt;
-&lt;p&gt;I learned a lot unpacking my discomfort with CRDTs over the years with my students, so my next few posts will hopefully expose and summarize some of what we learned along the way. You can decide whether this makes you more or less likely to use CRDTs in your code, but hopefully your decisions and ensuing heuristics will be better informed.&lt;/p&gt;</content:encoded></item><item><title><![CDATA[Looking Back to Look Ahead]]></title><description><![CDATA[This is the second of two background posts reflecting on my technical interests, to set some context for this blog.
-While there's no…]]></description><link>https://jhellerstein.github.io/blog/looking-back/</link><guid isPermaLink="false">https://jhellerstein.github.io/blog/looking-back/</guid><pubDate>Wed, 30 Apr 2025 00:00:00 GMT</pubDate><content:encoded>&lt;p&gt;This is the second of two background posts reflecting on my technical interests, to set some context for this blog.
-While there&apos;s no breaking news here, I hope that outlining my long-term threads of work might spark interest or recognition. If something resonates, I’d love to hear what caught your eye.&lt;/p&gt;
-&lt;h2&gt;Looking back on research to date&lt;/h2&gt;
-&lt;p&gt;Thanks largely to collaborations, I&apos;ve worked on a lot of different projects over the years. At times, I’ve felt a bit &lt;em&gt;too&lt;/em&gt; scattered. Still, looking back, I see a through-line of long-term interests that have anchored my work and kept me engaged. These include formal programming models for distributed systems, the role of semantics in coordination, and the intersection of human insight and automated tools—threads that continue to shape my work today.&lt;/p&gt;
-&lt;h3&gt;Formal languages for distributed programming&lt;/h3&gt;
-&lt;p&gt;One of the signatures of the database field is its bold embrace of high-level declarative languages, and the multi-decade challenge of translating from there down to efficient execution. I&apos;m glad to be part of a scientific culture that is willing to be patient and dig deep! One of the themes I&apos;ve pursued over time has been to take the lessons of declarative query languages and try to adapt them to other domains. I&apos;ve been at this for over two decades, and I think we&apos;re now ready to deliver some big practical payoffs outside the research world.&lt;/p&gt;
-&lt;p&gt;This theme began with a run of work on &lt;a href=&quot;https://dl.acm.org/doi/10.1145/1592761.1592785&quot;&gt;Declarative Networking&lt;/a&gt; in the oughts. We started pursuing a broader focus on general-purpose distributed computing in the 2010&apos;s. Along the way I also worked on SQL-based machine learning in the &lt;a href=&quot;https://dl.acm.org/doi/10.14778/1687553.1687576&quot;&gt;MADlib&lt;/a&gt; project, which exercised some of the same challenges.&lt;/p&gt;
-&lt;p&gt;Our early efforts in language design were ad-hoc extensions of datalog to networking, including &lt;a href=&quot;https://dl.acm.org/doi/10.1145/1142473.1142485&quot;&gt;NDlog&lt;/a&gt; for routing, and &lt;a href=&quot;https://dl.acm.org/doi/10.1145/1095810.1095818&quot;&gt;Overlog&lt;/a&gt; for overlay networks. As my ambitions expanded to designing a general-purpose distributed programming, my PhD students (an awesome trio of &lt;a href=&quot;https://people.ucsc.edu/~palvaro/&quot;&gt;Peter Alvaro&lt;/a&gt;, &lt;a href=&quot;https://dl.acm.org/profile/81314493838&quot;&gt;Tyson Condie&lt;/a&gt; and &lt;a href=&quot;https://www.neilconway.org/&quot;&gt;Neil Conway&lt;/a&gt;) forced a pause. &quot;Why,&quot; they asked, &quot;would we design a new language before we try building things in the previous language?&quot; So, a bit painfully, they built a new Overlog runtime in Java, and reimplemented large chunks of Hadoop with it in a project we called &lt;a href=&quot;https://dl.acm.org/doi/10.1145/1755913.1755937&quot;&gt;BOOM Analytics&lt;/a&gt;. Tyson also built an Overlog optimizer in Overlog called &lt;a href=&quot;https://dl.acm.org/doi/10.14778/1453856.1453978&quot;&gt;Evita Raced&lt;/a&gt;.&lt;/p&gt;
-&lt;p&gt;Based on those experiences, we finally nailed our formal semantics with the &lt;a href=&quot;https://dl.acm.org/doi/10.1007/978-3-642-24206-9_16&quot;&gt;Dedalus&lt;/a&gt; language, which made time and space first class logical citizens, and allowed for the development of a formal model theoretic semantics. Dedalus was still a variant of datalog, which made it nice and clean for formal reasoning, but awkward for developers—its syntax was unfamiliar, the tooling was minimal, and the programming model felt restrictive for common tasks.&lt;/p&gt;
-&lt;h3&gt;Practical languages for distributed programming: Bloom and Hydro&lt;/h3&gt;
-&lt;p&gt;Our first &lt;em&gt;practical&lt;/em&gt; distributed programming language was &lt;a href=&quot;https://bloom-lang.net&quot;&gt;Bloom&lt;/a&gt;, which stepped away from logic programming to embrace functional syntax and algebraic dataflow. Bloom was the first of our languages that was actually pretty fun to program in (though I was one of the few who actually had that experience!) Just as the Bloom PhD students were graduating and moving on to new challenges, I got distracted by adventures in startup land working on visualization, AI and program synthesis for data wrangling (see below). That put this agenda on the back burner for almost 10 years.&lt;/p&gt;
-&lt;p&gt;Over the past 5 years or so, a team of us has returned to attack high-level distributed programming with vigor—buoyed by renewed community interest in correctness, safety, and expressiveness, and a broader ecosystem shift toward systems languages like Rust. Our &lt;a href=&quot;https://hydro.run&quot;&gt;Hydro&lt;/a&gt; project is a serious effort to deliver on the agenda of general-purpose distributed programming, with new depth and relevance in the Rust ecosystem. This is both a passion project for me, and a serious software package targeted at real developers. I&apos;m sure I&apos;ll be blogging a lot about Hydro and related topics here over time, so I&apos;ll end the discussion here with that.&lt;/p&gt;
-&lt;h3&gt;CALM, distributed computing and coordination avoidance&lt;/h3&gt;
-&lt;p&gt;I got started on high-level language design for the opportunity to demonstrate optimization opportunities. But it turned out that many of the ideas and lessons that arose were more about semantics than performance.&lt;/p&gt;
-&lt;p&gt;Just as &lt;a href=&quot;https://en.wikipedia.org/wiki/Linguistic_relativity&quot;&gt;language shapes how we think about the world&lt;/a&gt;, programming languages shape how we think about computing. So maybe it&apos;s no surprise that designing new programming languages helped my group see things differently and ask new questions.&lt;/p&gt;
-&lt;p&gt;In my early days working on distributed computing, I got restless with that community&apos;s interests in optimizing protocols for tasks like consensus and fault tolerance. As an outsider, I was struck by how much complexity the distributed systems community was willing to embrace for relatively modest performance gains. My background in databases had trained me to seek orders-of-magnitude improvements, so I found myself wondering whether all that protocol engineering was truly essential. Rather than diving into consensus and coordination, I leaned toward avoiding them altogether. How far could I get without them?&lt;/p&gt;
-&lt;p&gt;That turned out to be a deep question, one that for some reason nobody had asked or answered in the literature. Our experience in Dedalus with &quot;fixing&quot; the bugs in ND/Overlog gave me a big hint: our use cases didn&apos;t need distributed systems coordination &lt;em&gt;if they were monotone&lt;/em&gt;! (Roughly speaking, monotonicity means that once something becomes true, it stays true—an idea that’s easy to recognize in datalog languages but nearly invisible in imperative ones. That&apos;s the benefit of seeing differently!). The more I thought about it, this felt like a deeper insight, a case of &lt;em&gt;if and only if&lt;/em&gt;. This grew into the &lt;a href=&quot;https://dl.acm.org/doi/10.1145/1860702.1860704&quot;&gt;CALM Conjecture&lt;/a&gt; which I presented in a keynote at PODS 2010, and which was first proven as the &lt;a href=&quot;https://dl.acm.org/doi/10.1145/3369736&quot;&gt;CALM theorem&lt;/a&gt; in 2011.&lt;/p&gt;
-&lt;p&gt;Even outside the CALM formalisms, monotonic thinking has informed a lot of systems work in my group—from the super-fast &lt;a href=&quot;https://dl.acm.org/doi/abs/10.1109/TKDE.2019.2898401&quot;&gt;Anna&lt;/a&gt; &lt;a href=&quot;https://www.vldb.org/pvldb/vol12/p624-wu.pdf&quot;&gt;autoscaling&lt;/a&gt; key-value store, to the &lt;a href=&quot;https://dl.acm.org/doi/10.14778/3407790.3407836&quot;&gt;Cloudburst&lt;/a&gt; stateful serverless platform, to the work &lt;a href=&quot;http://www.bailis.org/&quot;&gt;Peter Bailis&lt;/a&gt; led on &lt;a href=&quot;https://dl.acm.org/doi/10.14778/2735508.2735509&quot;&gt;coordination avoidance for database transactions&lt;/a&gt;.&lt;/p&gt;
-&lt;p&gt;Perhaps most surprising was what &lt;a href=&quot;https://mwhittaker.github.io/&quot;&gt;Michael Whittaker&lt;/a&gt; showed in his PhD work with me: that coordination avoidance techniques could be leveraged to &lt;em&gt;scale coordination protocols themselves&lt;/em&gt;. That twist led us to &lt;a href=&quot;http://www.vldb.org/pvldb/vol14/p2203-whittaker.pdf&quot;&gt;Compartmentalized Paxos&lt;/a&gt;, and later to a set of &lt;a href=&quot;https://dl.acm.org/doi/10.1145/3639257&quot;&gt;compiler optimizations in Hydro&lt;/a&gt; that bring these ideas full circle.&lt;/p&gt;
-&lt;p&gt;And yes, that last bit shows that in the end I didn&apos;t avoid coordination research after all. But the will to procrastinate led to interesting exploration and invention along the way. I&apos;ve had this lesson on my web page since the 1990s:&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;&quot;Laziness in doing stupid things can be a great virtue&quot; -- James Hilton, &lt;em&gt;Lost Horizon&lt;/em&gt;&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;My corollary might be this: procrastinating known smart things can also be a virtue!&lt;/p&gt;
-&lt;h3&gt;Human/AI collaborations in Data Wrangling&lt;/h3&gt;
-&lt;p&gt;Early in my career, I got excited about building intuitive, interactive systems that let people explore data fluidly—a kind of game-like experience for analysis. (Yes, I too got interested in computer science via video games.) This theme started with my work on &lt;a href=&quot;https://dl.acm.org/doi/abs/10.1145/253260.253291&quot;&gt;Online Aggregation&lt;/a&gt;, and continued with a range of efforts in interactive data manipulation.&lt;/p&gt;
-&lt;p&gt;Inspired by a suggestion from the great &lt;a href=&quot;https://en.wikipedia.org/wiki/Michael_J._Carey_(computer_scientist)&quot;&gt;Mike Carey&lt;/a&gt; during a seminar at Berkeley, &lt;a href=&quot;https://www.linkedin.com/in/vijayshankar-raman-95363a/&quot;&gt;Vijayshankar Raman&lt;/a&gt; and I began exploring interactive visual interfaces for data cleaning in the &lt;a href=&quot;https://dl.acm.org/doi/10.5555/645927.672045&quot;&gt;Potter&apos;s Wheel&lt;/a&gt; project. This work was motivated by a recurring theme I saw in both academia and failed startup ventures like Cohera and Swivel: people get stuck on mundane but necessary data transformation tasks. This was especially frustrating for quantitative professionals without programming backgrounds—an audience that computer science had largely underserved at the time.&lt;/p&gt;
-&lt;p&gt;After many years—and after significant progress in the field of data visualization—I had the opportunity to collaborate for the first time with the amazing &lt;a href=&quot;https://en.wikipedia.org/wiki/Jeffrey_Heer&quot;&gt;Jeff Heer&lt;/a&gt;, who was then a rising star. The timing was serendipitous: enough had changed in the field that it felt like the right moment to return to the Potter&apos;s Wheel vision with new tools and energy. We were both excited to pick up where that work had left off. We recruited &lt;a href=&quot;https://www.linkedin.com/in/seankandel/&quot;&gt;Sean Kandel&lt;/a&gt; away from high frequency trading to enroll in the graduate program with Jeff at Stanford, and he built &lt;a href=&quot;https://dl.acm.org/doi/10.1145/1978942.1979444&quot;&gt;Wrangler&lt;/a&gt; and &lt;a href=&quot;https://dl.acm.org/doi/10.1145/2254556.2254659&quot;&gt;Profiler&lt;/a&gt; as vehicles for new ideas in this space, which included an embrace of AI assistance. Sean also kicked us into entrepreneurial mode, and we founded &lt;a href=&quot;https://en.wikipedia.org/wiki/Trifacta&quot;&gt;Trifacta&lt;/a&gt; to commercialize the work. This turned into a 10-year startup journey—one that brought new collaborators, new skills, and a crash course in navigating industry shifts. We rode the Big Data wave in and out, and eventually found ourselves in the SaaS era, helped along by Google white-labeling Trifacta as &lt;em&gt;Google Cloud Dataprep&lt;/em&gt;. That move pushed us further into the future than we might have gone on our own.&lt;/p&gt;
-&lt;p&gt;Trifacta was very early in exploring questions that are now &lt;em&gt;au courant&lt;/em&gt; in the LLM era: how do we design environments for humans to collaborate with AI on code and data? Our models and inference quality at the time were far more primitive, relying on heuristics and simple statistical techniques. But many of the UX ideas we explored remain strikingly relevant: empowering users to visually detect data quality issues, interact directly with data visualizations and grids, receive AI suggestions as both code and visual feedback, and iterate rapidly. What has changed is the sharpness of inference; what hasn&apos;t changed is the need to guide and constrain it. Whether the AI is 90% right or 75% right, it still needs to be scaffolded for humans to quickly evaluate and steer the process. These experiences continue to shape how I think about designing AI-powered developer tools—especially when it comes to interaction models, scaffolding, and trust. I wrote about our broad ideas in this space in the paper on &lt;a href=&quot;https://idl.cs.washington.edu/files/2015-PredictiveInteraction-CIDR.pdf&quot;&gt;Predictive Interaction&lt;/a&gt; and the Guide/Decide loop we were exploring in Trifacta. More recently, Berkeley&apos;s &lt;a href=&quot;https://epic.berkeley.edu&quot;&gt;EPIC Data Lab&lt;/a&gt; was conceived in part based on this experience, and my colleagues there continue to push in many related directions regarding low-code data management.&lt;/p&gt;
-&lt;p&gt;If you squint, this is another attack on high-level programming models—in this case &quot;low code&quot; approaches for non-programmers. In that lens, Trifacta was a low-code environment for doing AI-assisted program synthesis of data wrangling scripts. I fully expect that lessons from Wrangler, Trifacta, and Predictive Interaction will influence how we approach LLM-based assistance in Hydro, though Hydro is targeting more technical software engineers and is therefore less data-centric. I bet I&apos;ll have more to say on that front in the coming years.&lt;/p&gt;
-&lt;h3&gt;... and so much more&lt;/h3&gt;
-&lt;p&gt;It&apos;s hard to omit so many other topics that I&apos;ve worked with folks on over the years—especially because many of them were the work of amazing students and colleagues who I haven&apos;t had a chance to shout out to! I keep a &lt;a href=&quot;https://dsf.berkeley.edu/jmh/student.html&quot;&gt;list of my PhD students&lt;/a&gt; online. For the research topics, I&apos;ll add an appendix of sorts to the bottom of this post.&lt;/p&gt;
-&lt;h2&gt;Moving Forward&lt;/h2&gt;
-&lt;p&gt;As I look ahead, I expect to dig even deeper into the Hydro agenda. On the pragmatic front, the codebase is maturing and ready to be tested in the wild—so it&apos;s time to find bold, high-impact use cases that will stretch our ideas and tools. On the research side, we&apos;re just beginning to scratch the surface of what&apos;s possible. One especially exciting direction is exploring how we can deliver a fundamentally new programming model for distributed systems in the era of AI-assisted development.&lt;/p&gt;
-&lt;p&gt;You can expect more posts here about those core Hydro themes, as well as the tangents and side quests that keep things interesting—both the breakthroughs and the frustrations. As Hydro transitions off campus, I may find myself with even more reason to document the journey. Either way, there’s a lot to say—and I’m looking forward to sharing it.&lt;/p&gt;
-&lt;p&gt;Thanks for reading. Onward!&lt;/p&gt;
-&lt;h2&gt;Topics for Another Day&lt;/h2&gt;
-&lt;p&gt;It’s hard to write a recap like this without feeling the limits of the form. Nearly everything I’ve worked on has been deeply collaborative, and there are far more colleagues and students I admire than I’ve had space to name here. The topics and shoutouts above are a sampling, not a ranking—and many important threads didn’t make the main cut simply for reasons of narrative flow or space.&lt;/p&gt;
-&lt;p&gt;In that spirit, here are a few more topics I’ve worked on that continue to inform how I think about computing today:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;The &lt;strong&gt;&lt;a href=&quot;https://gist.cs.berkeley.edu/&quot;&gt;Generalized Search Tree (GiST)&lt;/a&gt;&lt;/strong&gt; remains a core extensible indexing framework in PostgreSQL and powers spatial extensions like PostGIS. This work also led me into &lt;a href=&quot;https://dl.acm.org/doi/abs/10.1145/505241.505244&quot;&gt;Indexability Theory&lt;/a&gt; with my longtime mentor &lt;a href=&quot;https://en.wikipedia.org/wiki/Christos_Papadimitriou&quot;&gt;Christos Papadimitriou&lt;/a&gt;.&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;Adaptive query processing of data streams&lt;/strong&gt;: Our work on &lt;a href=&quot;https://dl.acm.org/doi/10.1145/335191.335420&quot;&gt;Eddies&lt;/a&gt;, &lt;a href=&quot;https://dl.acm.org/doi/10.5555/894174&quot;&gt;FLuX&lt;/a&gt;, and the &lt;a href=&quot;https://telegraph.cs.berkeley.edu/&quot;&gt;TelegraphCQ&lt;/a&gt; project helped shape my thinking on stream-centric computing, a topic that is becoming increasingly relevant to general-purpose programming. The Telegraph team members went on to have broad impact across the database industry.&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;Peer-to-peer computing&lt;/strong&gt;: The &lt;a href=&quot;https://pier.cs.berkeley.edu/&quot;&gt;PIER&lt;/a&gt; project emerged during the early-2000s p2p wave. While the hype receded, the architectural ideas lingered. PIER got me thinking about the common ground between querying, indexing, routing, and overlay networks—components that all play roles in orchestrating distributed data and computation across space and time.&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;Sensor networks and probabilistic inference&lt;/strong&gt;: &lt;a href=&quot;https://telegraph.cs.berkeley.edu/tinydb/&quot;&gt;TinyDB&lt;/a&gt; shaped my early thinking about high-level programming of low-level devices, long before &quot;IoT&quot; was a thing. That line of work evolved into a collaboration with &lt;a href=&quot;https://guestrin.su.domains/&quot;&gt;Carlos Guestrin&lt;/a&gt; on distributed probabilistic inference—and helped pique my interest in AI after a discouraging first impression back in the era of expert systems and AI winter.&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;Metadata and data context&lt;/strong&gt;: Our &lt;a href=&quot;https://www.ground-context.org/&quot;&gt;Ground&lt;/a&gt; project explored lineage and metadata—i.e. &lt;em&gt;data context&lt;/em&gt;—in our increasingly disaggregated era. Though we moved on, some of its ideas live on in &lt;a href=&quot;https://datahubproject.io&quot;&gt;Datahub&lt;/a&gt;, thanks to our collaborator &lt;a href=&quot;https://www.linkedin.com/in/shirshankadas&quot;&gt;Shirshanka Das&lt;/a&gt;.&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;Provenance for ML pipelines&lt;/strong&gt;: &lt;a href=&quot;https://rlnsanz.github.io/&quot;&gt;Rolando Garcia&lt;/a&gt; did his thesis work with us on &lt;a href=&quot;https://github.com/ucbrise/flor&quot;&gt;Flor&lt;/a&gt;, a system for &lt;em&gt;hindsight logging&lt;/em&gt; in long-running training jobs. He continues to push this space forward—see his &lt;a href=&quot;https://arxiv.org/abs/2408.02498&quot;&gt;recent piece&lt;/a&gt; for where it’s going next.&lt;/li&gt;
-&lt;/ul&gt;</content:encoded></item><item><title><![CDATA[Context for a New Home]]></title><description><![CDATA[Time to get blogging again. After a long run with Data in Beta, it's nice to have a fresh start. WordPress was feeling clunky, and over time…]]></description><link>https://jhellerstein.github.io/blog/new-home/</link><guid isPermaLink="false">https://jhellerstein.github.io/blog/new-home/</guid><pubDate>Sun, 27 Apr 2025 00:00:00 GMT</pubDate><content:encoded>&lt;p&gt;Time to get blogging again. After a long run with &lt;a href=&quot;https://databeta.wordpress.com/&quot;&gt;Data in Beta&lt;/a&gt;, it&apos;s nice to have a fresh start. WordPress was feeling clunky, and over time the title took on unintended connotations. So I’m starting over—lighter, cleaner, and more grounded here on GitHub Pages.&lt;/p&gt;
-&lt;p&gt;The ideas won’t be any more “finished” than before, but it feels like a good time to shed some baggage and keep moving.&lt;/p&gt;
-&lt;p&gt;I&apos;ll still be blogging mostly about thoughts that come up in research and development with my team.&lt;br&gt;
-If you&apos;re into programming, computation, data management, or distributed systems,&lt;br&gt;
-you might find things here to interest you over time.&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2&gt;Research Roots&lt;/h2&gt;
-&lt;p&gt;To set some context for what you&apos;ll find on this blog, here&apos;s a bit about where I’m coming from—intellectually and professionally.&lt;/p&gt;
-&lt;p&gt;I was trained as a database researcher back in my salad days. Out of college, I interned with the storied database group at IBM Almaden—the same team who brought us System R, which begat R*, which begat Starburst, the project I worked on.&lt;/p&gt;
-&lt;p&gt;I then did my MS with the amazing Postgres team at Berkeley, and continued working on Postgres with them as I did a PhD with the famed Wisconsin database mafia.&lt;/p&gt;
-&lt;p&gt;In retrospect, I was very fortunate to do a tour of duty with each of the most influential database groups of the time. I learned a ton.&lt;/p&gt;
-&lt;p&gt;During that training I met some outsized personalities and grew a thicker skin, which has undoubtedly had both positive and negative impacts on my professional life. That said, all my mentors were incredibly kind and supportive to me personally, and I&apos;ll always be paying forward their influences—especially &lt;a href=&quot;https://www.linkedin.com/in/meichun-hsu-0a72968&quot;&gt;Meichun Hsu&lt;/a&gt;, &lt;a href=&quot;https://www.linkedin.com/in/hamid-pirahesh-38368010/&quot;&gt;Hamid Pirahesh&lt;/a&gt;, &lt;a href=&quot;https://en.wikipedia.org/wiki/Michael_Stonebraker&quot;&gt;Mike Stonebraker&lt;/a&gt;, and &lt;a href=&quot;https://en.wikipedia.org/wiki/Jeffrey_Naughton&quot;&gt;Jeff Naughton&lt;/a&gt;.&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2&gt;The Benefits of a Database Upbringing&lt;/h2&gt;
-&lt;p&gt;Database research was—and still is—my home research community. It&apos;s a great space: a cross-cutting area of computing that has, from its beginnings, spanned academia and industry, theory and practice.&lt;/p&gt;
-&lt;p&gt;Data management provides a context to work on pretty much every computing topic imaginable. But database folks see the world of computing a bit differently: our primary focus is on the data that moves around, rather than the silicon resources of a computer. This often frees us up to take a broader view.&lt;/p&gt;
-&lt;p&gt;There&apos;s a meme in the &quot;Systems&quot; community: for any given topic, someone says “I think database people already solved that problem.”&lt;br&gt;
-And y’know … it&apos;s not wrong! 🙂&lt;/p&gt;
-&lt;p&gt;DB folks were among the first in software to tackle service-oriented computing at scale, with correctness and fault tolerance guarantees, and an eye toward serving a wide range of users—not just hobbyists and hackers.&lt;/p&gt;
-&lt;p&gt;The goalposts have shifted since the 1970s, of course, and sometimes being &lt;em&gt;early&lt;/em&gt; to a technology can be a liability in the business world. But much less so in research!&lt;/p&gt;
-&lt;p&gt;It&apos;s kind of amazing how prescient the DB folks were in the 1970s and 1980s (before my time!) about the problems worth solving in computer science. And it&apos;s not just the applied folks—there&apos;s also a ton of database theory work that keeps coming back in new contexts.&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2&gt;Cross-Pollination&lt;/h2&gt;
-&lt;p&gt;Over the years, I’ve had the good fortune to collaborate with friends from all corners of computing: experts in distributed systems, programming languages, HCI, AI, networking, and theory.&lt;/p&gt;
-&lt;p&gt;I&apos;ve always liked working with people who can teach me new things, and I enjoy having a broad portfolio of topics to keep me curious.&lt;/p&gt;
-&lt;p&gt;Cross-area collaboration pulls you away from the center of your home field—and on the whole, I’ve been glad about that. Many of the most interesting places are away from the center.&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2&gt;Outside the Box&lt;/h2&gt;
-&lt;p&gt;Topic areas aside, I generally prefer to work on problems that most folks are &lt;em&gt;not&lt;/em&gt; working on.&lt;/p&gt;
-&lt;p&gt;Hot topics drive scientists to race for discovery. Lots of people like racing—especially because the fastest racer gets a big medal! But in most cases, if the winner had tripped along the way, someone else would have replaced them with no appreciable difference in outcome.&lt;/p&gt;
-&lt;p&gt;I find that highly demotivating, particularly in a field where the main goal is innovation.&lt;/p&gt;
-&lt;p&gt;I don’t like to race. I’d rather explore and invent.&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2&gt;Coming Up&lt;/h2&gt;
-&lt;p&gt;In the next post, I’ll dig into some of the research that’s grown out of this perspective—ranging from language design and distributed consistency to data visualization, AI-based systems and beyond.&lt;/p&gt;</content:encoded></item></channel></rss>
+
+Notice what we did here: we formed a *composite* semilattice `(causalContext, (adds, removes))` out of very simple semilattice building blocks.
+The `merge` functions of these lattices effectively invoke the encapsulated sub-lattice `merge` functions recursively.
+
+*It really is lattices all the way down!*
+
+
+#### Using Version Vectors for Safe Expiration
+To use our version vectors, we will make a few small changes to our OR-set design:
+
+1. Each node locally maintains an overall version vector containing the `merge` of *all* version vectors seen so far: this is typically called a *vector clock*. It represents a high-watermark of our local knowledge of global progress. 
+2. When an item is deleted, its tombstone timestamp is set to the local vector clock.
+
+We can now do expiration safely: tombstones are only expired if their timestamp is lower in the partial order than the local *vector clock*: if so, we can be sure that *every other node also knows about this tombstone, and will eventually expire it as well*.
+
+## &lt;a id=&quot;op-based&quot;&gt;&lt;/a&gt;A Note on Op-Based CRDTS
+As mentioned above, many CRDT fans like to talk about two &quot;different&quot; kinds of CRDTs: normal (&quot;state-based&quot;) semilattice CRDTs, and something called &quot;op-based&quot; CRDTs. *I&apos;m here to tell you that correct op-based CRDTs are also semilattices; the distinction is not fundamental.*
+
+An &quot;op-based&quot; CRDT is just a particular class of semilattice. The state of an op-based CRDT represents a *partially-ordered log of operations* (opaque commands). The CRDT&apos;s job is to ensure that the partially-ordered log is consistent across nodes. 
+
+The partial order among ops can be captured by each site tagging every new op it generates with a `causalContext` value. This ensures (1) that recipients of ops from node $n$ will have them ordered in the same way as $n$ did, and (2) operations *across* nodes are causally ordered, via the `causalContext`.
+
+Specifically, the state $S$ of an op-based CRDT can simply be a *set* of `(causalContext, op)` tuples, with simple set-union as the `merge` function. The `causalContext` is ignored by the lattice `merge`, but carried along to preserve a consistent partial order of the log. One typical `causalContext` implementation is to use vector clock timestamps, with each node incrementing its entry in the vector clock for every op and message.
+
+That&apos;s really all there is to an &quot;op-based&quot; CRDT: it&apos;s a grow-only set of causally-stamped commands. 
+
+Typically, op-based CRDT designs assume that the log at each site is &quot;played&quot; (eagerly or lazily), by executing the ops in their causal partial order to materialize the local state. This is only required to support a &quot;read&quot; operation, and hence is effectively outside the scope of the CRDT math. Because causal order is only a partial order, different nodes could &quot;play&quot; some ops in different orders. As a result, op-based CRDT designs typically require the ops themselves to be mutually commutative. 
+
+If an op-based CRDT has quiesced and propagated to every node, and the ops themselves are mutually commutative, then every node can &quot;play&quot; the log in some total order that respects the partial order, and all nodes will end up with a convergent outcome. 
+
+To summarize: an op-based CRDT is still just a simple set semilattice! The only wrinkles are:
+1. The items in the op-based CRDT set are stamped with causalContext to enable causally-ordered replay
+2. For the ops to be meaningful at replay time, ops across sites should be commutative.
+
+## 🪜 &lt;a id=&quot;building-on-an-existing-turtle&quot;&gt;&lt;/a&gt;You Can Build on a Turtle — But Know What It Carries
+Sometimes, a system&apos;s lower layers provide additional guarantees that allow us to skip some details and rely on a turtle below us.
+
+&gt; Example: If your network guarantees causal delivery, you can safely drop explicit causal tracking in your CRDT.
+
+But beware: your CRDT is now resting on that turtle. If the network is not in fact behaving like a causal semilattice, your convergence proofs go out the window!
+
+## 📌 Takeaways
+- ✅ Every CRDT must be a (correct) semilattice
+- ✅ Order comparisons must respect the partial order induced by `merge`.
+- ✅ Model all necessary assumptions *inside* the lattice.
+- ✅ Build on trusted turtles only when you know exactly what they can carry safely.
+
+When you do all that?
+&gt; **It&apos;s semilattices all the way down**.
+
+That&apos;s math you can build on.
+
+</content:encoded></item><item><title><![CDATA[A Run of CRDT Posts]]></title><description><![CDATA[Over the next few days, I'm going to post a number of observations about CRDTs: ~~Convergent~~ Conflict-free Replicated Data Types. These…]]></description><link>https://hellerstein.io/blog/crdt-intro/</link><guid isPermaLink="false">https://hellerstein.io/blog/crdt-intro/</guid><pubDate>Wed, 21 May 2025 00:00:00 GMT</pubDate><content:encoded>Over the next few days, I&apos;m going to post a number of observations about *CRDTs*: ~~Convergent~~ Conflict-free Replicated Data Types. These are data structures that aspire to help us with *coordination-free distributed programming*, a topic that interests me a lot. How can developers (or languages/compilers) deliver distributed programs that are *safe* or *correct* in important ways, without employing expensive mechanisms for *coordination* that make the global cloud run as slowly as a sequential computer?
+
+In a nutshell, my take is that CRDTs are built on an elegant kernel, but offer a leaky abstraction that misleads a lot of developers -- and researchers. Understanding the ideas and problems of CRDTs is a great way to walk into this domain. I&apos;ll give an overview in this post, and the series of posts will go futher.
+
+## CRDTs: Pros &amp; Cons (Lattices &amp; Lettuces?)
+First, the elegant part, which I find very appealing: 
+
+1. **Deep Roots**: CRDTs are based on *semilattices*, which are simple, abstract mathematical structures that have a `join` operator that is *associative, commutative, and idempotent*. The idea to use this for replicated data types goes back at least to work by [Baquero and Moura in 1997](https://gsd.di.uminho.pt/members/cbm/ps/scadt3.pdf). They deserve more citations for this! (HT [Conor Power](https://www.linkedin.com/in/conorpower23) for educating me about this; I believe he learned about it from [Marc Shapiro](https://www.lip6.fr/actualite/personnes-fiche.php?ident=P1450) of CRDT fame.) 
+
+2. **Moar Algebra!**: The use of modern algebra as a building block for correctness in distributed systems and database systems is a wonderful direction for the field, and we&apos;re seeing more and more of this work in recent years. (See for example the [Simons&apos; Institute gathering](https://simons.berkeley.edu/workshops/logic-algebra-query-evaluation#simons-tabs) from a couple years back.) This semilattice/CRDT line of work was early, elegant and easy to understand. Lovely stuff.
+
+Unfortunately there are few key problems that arise in common discussion of CRDTs:
+
+1. **Drifting from Correctness**. As people walk away from the semilattice foundation, they can lose their moorings in correct math. This is entirely avoidable, and most experts know how to avoid bugs here, but the discussion often gets unnecessarily subtle ... in ways that confuse people.
+
+2. **Unsafe to Use**. The algebra of semilattices has a single operator: `join`. Notably it doesn&apos;t have any operator that corresponds to *read* or *inspect*. In fact, CRDTs as described in the literature provide *absolutely no guarantees to readers*, so a &quot;proper&quot; CRDT implementation should *not allow reads!* Which is to say a correct CRDT is an entirely useless theoretical object. Yet people use CRDTs, inevitably reading/inspecting them in unsafe/non-deterministic ways. Worse, many developers *think* they&apos;re getting useful correctness guarantees from CRDTs, which they are not! The only safe thing to do with a CRDT is to leave it unexamined.
+
+3. **Programmability Issues**. As *unreadable data types*, CRDTs can&apos;t be composed safely into useful programs. How in fact can we use them?  Ideally we&apos;d like a *language* that allows correct composition of CRDT building blocks. This is something folks have looked at in DSLs like [LVars](https://dl.acm.org/doi/abs/10.1145/2502323.2502326), [Bloom^L](https://dl.acm.org/doi/abs/10.1145/2391229.2391230), [Lasp](https://dl.acm.org/doi/abs/10.1145/2790449.2790525) and [Gallifrey](https://par.nsf.gov/biblio/10095545). There&apos;s still work to do to deliver those ideas to developers in a familiar frame, which is one goal of our [Hydro](https://hydro.run) library for Rust.
+
+### My Take
+So ... it&apos;s true that I&apos;m not a huge fan of CRDTs as a practical matter. But I think the core ideas are quite lovely, and the pitfalls are interesting and really educational for developers and researchers to understand.  Much respect to the folks who&apos;ve worked on CRDTs over the years, both for what they&apos;ve invented and the challenges they&apos;ve raised.
+
+I learned a lot unpacking my discomfort with CRDTs over the years with my students, so my next few posts will hopefully expose and summarize some of what we learned along the way. You can decide whether this makes you more or less likely to use CRDTs in your code, but hopefully your decisions and ensuing heuristics will be better informed.</content:encoded></item><item><title><![CDATA[Looking Back to Look Ahead]]></title><description><![CDATA[This is the second of two background posts reflecting on my technical interests, to set some context for this blog. While there's no…]]></description><link>https://hellerstein.io/blog/looking-back/</link><guid isPermaLink="false">https://hellerstein.io/blog/looking-back/</guid><pubDate>Wed, 30 Apr 2025 00:00:00 GMT</pubDate><content:encoded>
+This is the second of two background posts reflecting on my technical interests, to set some context for this blog.
+While there&apos;s no breaking news here, I hope that outlining my long-term threads of work might spark interest or recognition. If something resonates, I’d love to hear what caught your eye.
+
+## Looking back on research to date
+
+Thanks largely to collaborations, I&apos;ve worked on a lot of different projects over the years. At times, I’ve felt a bit *too* scattered. Still, looking back, I see a through-line of long-term interests that have anchored my work and kept me engaged. These include formal programming models for distributed systems, the role of semantics in coordination, and the intersection of human insight and automated tools—threads that continue to shape my work today.
+
+### Formal languages for distributed programming
+
+One of the signatures of the database field is its bold embrace of high-level declarative languages, and the multi-decade challenge of translating from there down to efficient execution. I&apos;m glad to be part of a scientific culture that is willing to be patient and dig deep! One of the themes I&apos;ve pursued over time has been to take the lessons of declarative query languages and try to adapt them to other domains. I&apos;ve been at this for over two decades, and I think we&apos;re now ready to deliver some big practical payoffs outside the research world.
+
+This theme began with a run of work on [Declarative Networking](https://dl.acm.org/doi/10.1145/1592761.1592785) in the oughts. We started pursuing a broader focus on general-purpose distributed computing in the 2010&apos;s. Along the way I also worked on SQL-based machine learning in the [MADlib](https://dl.acm.org/doi/10.14778/1687553.1687576) project, which exercised some of the same challenges.
+
+Our early efforts in language design were ad-hoc extensions of datalog to networking, including [NDlog](https://dl.acm.org/doi/10.1145/1142473.1142485) for routing, and [Overlog](https://dl.acm.org/doi/10.1145/1095810.1095818) for overlay networks. As my ambitions expanded to designing a general-purpose distributed programming, my PhD students (an awesome trio of [Peter Alvaro](https://people.ucsc.edu/~palvaro/), [Tyson Condie](https://dl.acm.org/profile/81314493838) and [Neil Conway](https://www.neilconway.org/)) forced a pause. &quot;Why,&quot; they asked, &quot;would we design a new language before we try building things in the previous language?&quot; So, a bit painfully, they built a new Overlog runtime in Java, and reimplemented large chunks of Hadoop with it in a project we called [BOOM Analytics](https://dl.acm.org/doi/10.1145/1755913.1755937). Tyson also built an Overlog optimizer in Overlog called [Evita Raced](https://dl.acm.org/doi/10.14778/1453856.1453978).
+
+Based on those experiences, we finally nailed our formal semantics with the [Dedalus](https://dl.acm.org/doi/10.1007/978-3-642-24206-9_16) language, which made time and space first class logical citizens, and allowed for the development of a formal model theoretic semantics. Dedalus was still a variant of datalog, which made it nice and clean for formal reasoning, but awkward for developers—its syntax was unfamiliar, the tooling was minimal, and the programming model felt restrictive for common tasks.
+
+### Practical languages for distributed programming: Bloom and Hydro
+
+Our first *practical* distributed programming language was [Bloom](https://bloom-lang.net), which stepped away from logic programming to embrace functional syntax and algebraic dataflow. Bloom was the first of our languages that was actually pretty fun to program in (though I was one of the few who actually had that experience!) Just as the Bloom PhD students were graduating and moving on to new challenges, I got distracted by adventures in startup land working on visualization, AI and program synthesis for data wrangling (see below). That put this agenda on the back burner for almost 10 years.
+
+Over the past 5 years or so, a team of us has returned to attack high-level distributed programming with vigor—buoyed by renewed community interest in correctness, safety, and expressiveness, and a broader ecosystem shift toward systems languages like Rust. Our [Hydro](https://hydro.run) project is a serious effort to deliver on the agenda of general-purpose distributed programming, with new depth and relevance in the Rust ecosystem. This is both a passion project for me, and a serious software package targeted at real developers. I&apos;m sure I&apos;ll be blogging a lot about Hydro and related topics here over time, so I&apos;ll end the discussion here with that.
+
+### CALM, distributed computing and coordination avoidance
+
+I got started on high-level language design for the opportunity to demonstrate optimization opportunities. But it turned out that many of the ideas and lessons that arose were more about semantics than performance.
+
+Just as [language shapes how we think about the world](https://en.wikipedia.org/wiki/Linguistic_relativity), programming languages shape how we think about computing. So maybe it&apos;s no surprise that designing new programming languages helped my group see things differently and ask new questions.
+
+In my early days working on distributed computing, I got restless with that community&apos;s interests in optimizing protocols for tasks like consensus and fault tolerance. As an outsider, I was struck by how much complexity the distributed systems community was willing to embrace for relatively modest performance gains. My background in databases had trained me to seek orders-of-magnitude improvements, so I found myself wondering whether all that protocol engineering was truly essential. Rather than diving into consensus and coordination, I leaned toward avoiding them altogether. How far could I get without them?
+
+That turned out to be a deep question, one that for some reason nobody had asked or answered in the literature. Our experience in Dedalus with &quot;fixing&quot; the bugs in ND/Overlog gave me a big hint: our use cases didn&apos;t need distributed systems coordination *if they were monotone*! (Roughly speaking, monotonicity means that once something becomes true, it stays true—an idea that’s easy to recognize in datalog languages but nearly invisible in imperative ones. That&apos;s the benefit of seeing differently!). The more I thought about it, this felt like a deeper insight, a case of *if and only if*. This grew into the [CALM Conjecture](https://dl.acm.org/doi/10.1145/1860702.1860704) which I presented in a keynote at PODS 2010, and which was first proven as the [CALM theorem](https://dl.acm.org/doi/10.1145/3369736) in 2011.
+
+Even outside the CALM formalisms, monotonic thinking has informed a lot of systems work in my group—from the super-fast [Anna](https://dl.acm.org/doi/abs/10.1109/TKDE.2019.2898401) [autoscaling](https://www.vldb.org/pvldb/vol12/p624-wu.pdf) key-value store, to the [Cloudburst](https://dl.acm.org/doi/10.14778/3407790.3407836) stateful serverless platform, to the work [Peter Bailis](http://www.bailis.org/) led on [coordination avoidance for database transactions](https://dl.acm.org/doi/10.14778/2735508.2735509).
+
+Perhaps most surprising was what [Michael Whittaker](https://mwhittaker.github.io/) showed in his PhD work with me: that coordination avoidance techniques could be leveraged to *scale coordination protocols themselves*. That twist led us to [Compartmentalized Paxos](http://www.vldb.org/pvldb/vol14/p2203-whittaker.pdf), and later to a set of [compiler optimizations in Hydro](https://dl.acm.org/doi/10.1145/3639257) that bring these ideas full circle.
+
+And yes, that last bit shows that in the end I didn&apos;t avoid coordination research after all. But the will to procrastinate led to interesting exploration and invention along the way. I&apos;ve had this lesson on my web page since the 1990s:
+
+&gt; &quot;Laziness in doing stupid things can be a great virtue&quot; -- James Hilton, *Lost Horizon*
+
+My corollary might be this: procrastinating known smart things can also be a virtue!
+
+### Human/AI collaborations in Data Wrangling
+
+Early in my career, I got excited about building intuitive, interactive systems that let people explore data fluidly—a kind of game-like experience for analysis. (Yes, I too got interested in computer science via video games.) This theme started with my work on [Online Aggregation](https://dl.acm.org/doi/abs/10.1145/253260.253291), and continued with a range of efforts in interactive data manipulation.
+
+Inspired by a suggestion from the great [Mike Carey](https://en.wikipedia.org/wiki/Michael_J._Carey_(computer_scientist)) during a seminar at Berkeley, [Vijayshankar Raman](https://www.linkedin.com/in/vijayshankar-raman-95363a/) and I began exploring interactive visual interfaces for data cleaning in the [Potter&apos;s Wheel](https://dl.acm.org/doi/10.5555/645927.672045) project. This work was motivated by a recurring theme I saw in both academia and failed startup ventures like Cohera and Swivel: people get stuck on mundane but necessary data transformation tasks. This was especially frustrating for quantitative professionals without programming backgrounds—an audience that computer science had largely underserved at the time.
+
+After many years—and after significant progress in the field of data visualization—I had the opportunity to collaborate for the first time with the amazing [Jeff Heer](https://en.wikipedia.org/wiki/Jeffrey_Heer), who was then a rising star. The timing was serendipitous: enough had changed in the field that it felt like the right moment to return to the Potter&apos;s Wheel vision with new tools and energy. We were both excited to pick up where that work had left off. We recruited [Sean Kandel](https://www.linkedin.com/in/seankandel/) away from high frequency trading to enroll in the graduate program with Jeff at Stanford, and he built [Wrangler](https://dl.acm.org/doi/10.1145/1978942.1979444) and [Profiler](https://dl.acm.org/doi/10.1145/2254556.2254659) as vehicles for new ideas in this space, which included an embrace of AI assistance. Sean also kicked us into entrepreneurial mode, and we founded [Trifacta](https://en.wikipedia.org/wiki/Trifacta) to commercialize the work. This turned into a 10-year startup journey—one that brought new collaborators, new skills, and a crash course in navigating industry shifts. We rode the Big Data wave in and out, and eventually found ourselves in the SaaS era, helped along by Google white-labeling Trifacta as *Google Cloud Dataprep*. That move pushed us further into the future than we might have gone on our own.
+
+Trifacta was very early in exploring questions that are now *au courant* in the LLM era: how do we design environments for humans to collaborate with AI on code and data? Our models and inference quality at the time were far more primitive, relying on heuristics and simple statistical techniques. But many of the UX ideas we explored remain strikingly relevant: empowering users to visually detect data quality issues, interact directly with data visualizations and grids, receive AI suggestions as both code and visual feedback, and iterate rapidly. What has changed is the sharpness of inference; what hasn&apos;t changed is the need to guide and constrain it. Whether the AI is 90% right or 75% right, it still needs to be scaffolded for humans to quickly evaluate and steer the process. These experiences continue to shape how I think about designing AI-powered developer tools—especially when it comes to interaction models, scaffolding, and trust. I wrote about our broad ideas in this space in the paper on [Predictive Interaction](https://idl.cs.washington.edu/files/2015-PredictiveInteraction-CIDR.pdf) and the Guide/Decide loop we were exploring in Trifacta. More recently, Berkeley&apos;s [EPIC Data Lab](https://epic.berkeley.edu) was conceived in part based on this experience, and my colleagues there continue to push in many related directions regarding low-code data management.
+
+If you squint, this is another attack on high-level programming models—in this case &quot;low code&quot; approaches for non-programmers. In that lens, Trifacta was a low-code environment for doing AI-assisted program synthesis of data wrangling scripts. I fully expect that lessons from Wrangler, Trifacta, and Predictive Interaction will influence how we approach LLM-based assistance in Hydro, though Hydro is targeting more technical software engineers and is therefore less data-centric. I bet I&apos;ll have more to say on that front in the coming years.
+
+### ... and so much more
+
+It&apos;s hard to omit so many other topics that I&apos;ve worked with folks on over the years—especially because many of them were the work of amazing students and colleagues who I haven&apos;t had a chance to shout out to! I keep a [list of my PhD students](https://dsf.berkeley.edu/jmh/student.html) online. For the research topics, I&apos;ll add an appendix of sorts to the bottom of this post.
+
+## Moving Forward
+
+As I look ahead, I expect to dig even deeper into the Hydro agenda. On the pragmatic front, the codebase is maturing and ready to be tested in the wild—so it&apos;s time to find bold, high-impact use cases that will stretch our ideas and tools. On the research side, we&apos;re just beginning to scratch the surface of what&apos;s possible. One especially exciting direction is exploring how we can deliver a fundamentally new programming model for distributed systems in the era of AI-assisted development.
+
+You can expect more posts here about those core Hydro themes, as well as the tangents and side quests that keep things interesting—both the breakthroughs and the frustrations. As Hydro transitions off campus, I may find myself with even more reason to document the journey. Either way, there’s a lot to say—and I’m looking forward to sharing it.
+
+Thanks for reading. Onward!
+
+## Topics for Another Day
+
+It’s hard to write a recap like this without feeling the limits of the form. Nearly everything I’ve worked on has been deeply collaborative, and there are far more colleagues and students I admire than I’ve had space to name here. The topics and shoutouts above are a sampling, not a ranking—and many important threads didn’t make the main cut simply for reasons of narrative flow or space.
+
+In that spirit, here are a few more topics I’ve worked on that continue to inform how I think about computing today:
+
+- The **[Generalized Search Tree (GiST)](https://gist.cs.berkeley.edu/)** remains a core extensible indexing framework in PostgreSQL and powers spatial extensions like PostGIS. This work also led me into [Indexability Theory](https://dl.acm.org/doi/abs/10.1145/505241.505244) with my longtime mentor [Christos Papadimitriou](https://en.wikipedia.org/wiki/Christos_Papadimitriou).
+- **Adaptive query processing of data streams**: Our work on [Eddies](https://dl.acm.org/doi/10.1145/335191.335420), [FLuX](https://dl.acm.org/doi/10.5555/894174), and the [TelegraphCQ](https://telegraph.cs.berkeley.edu/) project helped shape my thinking on stream-centric computing, a topic that is becoming increasingly relevant to general-purpose programming. The Telegraph team members went on to have broad impact across the database industry.
+- **Peer-to-peer computing**: The [PIER](https://pier.cs.berkeley.edu/) project emerged during the early-2000s p2p wave. While the hype receded, the architectural ideas lingered. PIER got me thinking about the common ground between querying, indexing, routing, and overlay networks—components that all play roles in orchestrating distributed data and computation across space and time.
+- **Sensor networks and probabilistic inference**: [TinyDB](https://telegraph.cs.berkeley.edu/tinydb/) shaped my early thinking about high-level programming of low-level devices, long before &quot;IoT&quot; was a thing. That line of work evolved into a collaboration with [Carlos Guestrin](https://guestrin.su.domains/) on distributed probabilistic inference—and helped pique my interest in AI after a discouraging first impression back in the era of expert systems and AI winter.
+- **Metadata and data context**: Our [Ground](https://www.ground-context.org/) project explored lineage and metadata—i.e. *data context*—in our increasingly disaggregated era. Though we moved on, some of its ideas live on in [Datahub](https://datahubproject.io), thanks to our collaborator [Shirshanka Das](https://www.linkedin.com/in/shirshankadas).
+- **Provenance for ML pipelines**: [Rolando Garcia](https://rlnsanz.github.io/) did his thesis work with us on [Flor](https://github.com/ucbrise/flor), a system for *hindsight logging* in long-running training jobs. He continues to push this space forward—see his [recent piece](https://arxiv.org/abs/2408.02498) for where it’s going next.
+</content:encoded></item><item><title><![CDATA[Context for a New Home]]></title><description><![CDATA[Time to get blogging again. After a long run with Data in Beta, it's nice to have a fresh start. WordPress was feeling clunky, and over time…]]></description><link>https://hellerstein.io/blog/new-home/</link><guid isPermaLink="false">https://hellerstein.io/blog/new-home/</guid><pubDate>Sun, 27 Apr 2025 00:00:00 GMT</pubDate><content:encoded>
+Time to get blogging again. After a long run with [Data in Beta](https://databeta.wordpress.com/), it&apos;s nice to have a fresh start. WordPress was feeling clunky, and over time the title took on unintended connotations. So I’m starting over—lighter, cleaner, and more grounded here on GitHub Pages.  
+
+The ideas won’t be any more “finished” than before, but it feels like a good time to shed some baggage and keep moving.  
+
+I&apos;ll still be blogging mostly about thoughts that come up in research and development with my team.  
+If you&apos;re into programming, computation, data management, or distributed systems,  
+you might find things here to interest you over time.  
+
+---
+
+## Research Roots
+
+To set some context for what you&apos;ll find on this blog, here&apos;s a bit about where I’m coming from—intellectually and professionally.  
+
+I was trained as a database researcher back in my salad days. Out of college, I interned with the storied database group at IBM Almaden—the same team who brought us System R, which begat R*, which begat Starburst, the project I worked on.  
+
+I then did my MS with the amazing Postgres team at Berkeley, and continued working on Postgres with them as I did a PhD with the famed Wisconsin database mafia.  
+
+In retrospect, I was very fortunate to do a tour of duty with each of the most influential database groups of the time. I learned a ton.  
+
+During that training I met some outsized personalities and grew a thicker skin, which has undoubtedly had both positive and negative impacts on my professional life. That said, all my mentors were incredibly kind and supportive to me personally, and I&apos;ll always be paying forward their influences—especially [Meichun Hsu](https://www.linkedin.com/in/meichun-hsu-0a72968), [Hamid Pirahesh](https://www.linkedin.com/in/hamid-pirahesh-38368010/), [Mike Stonebraker](https://en.wikipedia.org/wiki/Michael_Stonebraker), and [Jeff Naughton](https://en.wikipedia.org/wiki/Jeffrey_Naughton).  
+
+---
+
+## The Benefits of a Database Upbringing
+
+Database research was—and still is—my home research community. It&apos;s a great space: a cross-cutting area of computing that has, from its beginnings, spanned academia and industry, theory and practice.  
+
+Data management provides a context to work on pretty much every computing topic imaginable. But database folks see the world of computing a bit differently: our primary focus is on the data that moves around, rather than the silicon resources of a computer. This often frees us up to take a broader view.  
+
+There&apos;s a meme in the &quot;Systems&quot; community: for any given topic, someone says “I think database people already solved that problem.”  
+And y’know … it&apos;s not wrong! 🙂  
+
+DB folks were among the first in software to tackle service-oriented computing at scale, with correctness and fault tolerance guarantees, and an eye toward serving a wide range of users—not just hobbyists and hackers.  
+
+The goalposts have shifted since the 1970s, of course, and sometimes being *early* to a technology can be a liability in the business world. But much less so in research!  
+
+It&apos;s kind of amazing how prescient the DB folks were in the 1970s and 1980s (before my time!) about the problems worth solving in computer science. And it&apos;s not just the applied folks—there&apos;s also a ton of database theory work that keeps coming back in new contexts.  
+
+---
+
+## Cross-Pollination
+
+Over the years, I’ve had the good fortune to collaborate with friends from all corners of computing: experts in distributed systems, programming languages, HCI, AI, networking, and theory.  
+
+I&apos;ve always liked working with people who can teach me new things, and I enjoy having a broad portfolio of topics to keep me curious.  
+
+Cross-area collaboration pulls you away from the center of your home field—and on the whole, I’ve been glad about that. Many of the most interesting places are away from the center.  
+
+---
+
+## Outside the Box
+
+Topic areas aside, I generally prefer to work on problems that most folks are *not* working on.
+
+Hot topics drive scientists to race for discovery. Lots of people like racing—especially because the fastest racer gets a big medal! But in most cases, if the winner had tripped along the way, someone else would have replaced them with no appreciable difference in outcome.  
+
+I find that highly demotivating, particularly in a field where the main goal is innovation.
+
+I don’t like to race. I’d rather explore and invent.  
+
+---
+
+## Coming Up
+
+In the next post, I’ll dig into some of the research that’s grown out of this perspective—ranging from language design and distributed consistency to data visualization, AI-based systems and beyond.
+</content:encoded></item></channel></rss>

@@ -1,0 +1,182 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" data-diagram-type="SEQUENCE" height="497px" preserveAspectRatio="none" style="width:305px;height:497px;" version="1.1" viewBox="0 0 305 497" width="305px" zoomAndPan="magnify">
+  <defs>
+    <style>
+      .st0 {
+        fill: #feffdd;
+        stroke: #181818;
+      }
+
+      .st0,
+      .st1,
+      .st2 {
+        stroke-width: .5px;
+      }
+
+      .st3,
+      .st4 {
+        stroke: #555;
+      }
+
+      .st3,
+      .st2 {
+        fill: none;
+      }
+
+      .st5 {
+        font-family: Helvetica Neue, Helvetica Neue;
+        font-weight: 700;
+      }
+
+      .st5,
+      .st6 {
+        font-size: 13px;
+        isolation: isolate;
+      }
+
+      .st1 {
+        fill: #f8f8f8;
+        stroke: #888;
+      }
+
+      .st6 {
+        fill: #000000;
+        font-family: sans-serif;
+        font-size: 13;
+        lengthAdjust: spacing;
+      }
+
+      .st4 {
+        fill: #555;
+      }
+
+      .st2 {
+        stroke: #bbb;
+        stroke-dasharray: 5 5;
+      }
+
+      .st7 {
+        fill-opacity: 0;
+      }
+
+      .st8 {
+        letter-spacing: .1em;
+      }
+
+      .st9 {
+        letter-spacing: 0em;
+      }
+
+      .st10 {
+        letter-spacing: 0em;
+      }
+
+      .st11 {
+        letter-spacing: 0em;
+      }
+    </style>
+  </defs>
+  <g>
+    <g>
+      <title>&#129489;</title>
+      <rect fill="#000000" fill-opacity="0.00000" height="391.7266" width="8" x="32" y="53.404" />
+      <line style="stroke:#BBBBBB;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="36" x2="36" y1="53.404" y2="445.1306" />
+    </g>
+    <g>
+      <title>&#127344;&#65039;</title>
+      <rect fill="#000000" fill-opacity="0.00000" height="391.7266" width="8" x="174.5054" y="53.404" />
+      <line style="stroke:#BBBBBB;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="177.9722" x2="177.9722" y1="53.404" y2="445.1306" />
+    </g>
+    <g>
+      <title>&#127345;&#65039;</title>
+      <rect fill="#000000" fill-opacity="0.00000" height="391.7266" width="8" x="247.5718" y="53.404" />
+      <line style="stroke:#BBBBBB;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="251.0386" x2="251.0386" y1="53.404" y2="445.1306" />
+    </g>
+    <g class="participant participant-head" data-participant="User">
+      <rect fill="#F8F8F8" height="47.404" rx="2.5" ry="2.5" style="stroke:#888888;stroke-width:0.5;" width="42" x="15" y="5" />
+      <text fill="#222222" font-family="Helvetica Neue" font-size="28" lengthAdjust="spacing" textLength="28" x="22" y="39.44">&#129489;</text>
+    </g>
+    <g class="participant participant-tail" data-participant="User">
+      <rect fill="#F8F8F8" height="47.404" rx="2.5" ry="2.5" style="stroke:#888888;stroke-width:0.5;" width="42" x="15" y="444.1306" />
+      <text fill="#222222" font-family="Helvetica Neue" font-size="28" lengthAdjust="spacing" textLength="28" x="22" y="478.5706">&#129489;</text>
+    </g>
+    <g class="participant participant-head" data-participant="NodeA">
+      <rect fill="#F8F8F8" height="47.404" rx="2.5" ry="2.5" style="stroke:#888888;stroke-width:0.5;" width="43.0664" x="156.9722" y="5" />
+      <text fill="#222222" font-family="Helvetica Neue" font-size="28" lengthAdjust="spacing" textLength="29.0664" x="163.9722" y="39.44">&#127344;&#65039;</text>
+    </g>
+    <g class="participant participant-tail" data-participant="NodeA">
+      <rect fill="#F8F8F8" height="47.404" rx="2.5" ry="2.5" style="stroke:#888888;stroke-width:0.5;" width="43.0664" x="156.9722" y="444.1306" />
+      <text fill="#222222" font-family="Helvetica Neue" font-size="28" lengthAdjust="spacing" textLength="29.0664" x="163.9722" y="478.5706">&#127344;&#65039;</text>
+    </g>
+    <g class="participant participant-head" data-participant="NodeB">
+      <rect fill="#F8F8F8" height="47.404" rx="2.5" ry="2.5" style="stroke:#888888;stroke-width:0.5;" width="43.0664" x="230.0386" y="5" />
+      <text fill="#222222" font-family="Helvetica Neue" font-size="28" lengthAdjust="spacing" textLength="29.0664" x="237.0386" y="39.44">&#127345;&#65039;</text>
+    </g>
+    <g class="participant participant-tail" data-participant="NodeB">
+      <rect fill="#F8F8F8" height="47.404" rx="2.5" ry="2.5" style="stroke:#888888;stroke-width:0.5;" width="43.0664" x="230.0386" y="444.1306" />
+      <text fill="#222222" font-family="Helvetica Neue" font-size="28" lengthAdjust="spacing" textLength="29.0664" x="237.0386" y="478.5706">&#127345;&#65039;</text>
+    </g>
+    <g class="message" data-participant-1="User" data-participant-2="NodeA">
+      <polygon fill="#555555" points="166.5054,80.7145,176.5054,84.7145,166.5054,88.7145,170.5054,84.7145" style="stroke:#555555;stroke-width:1;" />
+      <line style="stroke:#555555;stroke-width:1;" x1="36" x2="172.5054" y1="84.7145" y2="84.7145" />
+      <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="8.5757" x="43" y="79.9724">1</text>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="82.7671" x="55.5757" y="79.9724">add("potato")</text>
+    </g>
+    <polygon fill="#FEFFDD" points="150,97.7145,205,97.7145,215,108.7145,205,120.7145,150,120.7145,140,108.7145,150,97.7145" style="stroke:#181818;stroke-width:0.5;" />
+    <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="51.4614" x="152" y="114.2829">({&#129364;}, &#8709;)</text>
+    <g class="message" data-participant-1="User" data-participant-2="NodeB">
+      <polygon fill="#555555" points="239.5718,143.3356,249.5718,147.3356,239.5718,151.3356,243.5718,147.3356" style="stroke:#555555;stroke-width:1;" />
+      <line style="stroke:#555555;stroke-width:1;" x1="36" x2="245.5718" y1="147.3356" y2="147.3356" />
+      <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="8.5757" x="43" y="142.5935">2</text>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="82.7671" x="55.5757" y="142.5935">add("potato")</text>
+    </g>
+    <polygon fill="#FEFFDD" points="223,160.3356,278,160.3356,288,171.3356,278,183.3356,223,183.3356,213,171.3356,223,160.3356" style="stroke:#181818;stroke-width:0.5;" />
+    <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="51.4614" x="225" y="176.904">({&#129364;}, &#8709;)</text>
+    <g class="message" data-participant-1="User" data-participant-2="NodeA">
+      <polygon fill="#555555" points="166.5054,205.9567,176.5054,209.9567,166.5054,213.9567,170.5054,209.9567" style="stroke:#555555;stroke-width:1;" />
+      <line style="stroke:#555555;stroke-width:1;" x1="36" x2="172.5054" y1="209.9567" y2="209.9567" />
+      <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="8.5757" x="43" y="205.2145">3</text>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="82.8179" x="55.5757" y="205.2145">add("Ferrari")</text>
+    </g>
+    <polygon fill="#FEFFDD" points="138,222.9567,218,222.9567,228,233.9567,218,245.9567,138,245.9567,128,233.9567,138,222.9567" style="stroke:#181818;stroke-width:0.5;" />
+    <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="76.688" x="140" y="239.5251">({&#129364;, &#127950;&#65039;}, &#8709;)</text>
+    <g class="message" data-participant-1="User" data-participant-2="NodeB">
+      <polygon fill="#555555" points="239.5718,268.5778,249.5718,272.5778,239.5718,276.5778,243.5718,272.5778" style="stroke:#555555;stroke-width:1;" />
+      <line style="stroke:#555555;stroke-width:1;" x1="36" x2="245.5718" y1="272.5778" y2="272.5778" />
+      <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="8.5757" x="43" y="267.8356">4</text>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="82.8179" x="55.5757" y="267.8356">add("Ferrari")</text>
+    </g>
+    <polygon fill="#FEFFDD" points="211,285.5778,291,285.5778,301,296.5778,291,308.5778,211,308.5778,201,296.5778,211,285.5778" style="stroke:#181818;stroke-width:0.5;" />
+    <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="76.688" x="213" y="302.1462">({&#129364;, &#127950;&#65039;}, &#8709;)</text>
+    <g class="message" data-participant-1="User" data-participant-2="NodeA">
+      <polygon fill="#555555" points="166.5054,321.1989,176.5054,325.1989,166.5054,329.1989,170.5054,325.1989" style="stroke:#555555;stroke-width:1;" />
+      <line style="stroke:#555555;stroke-width:1;" x1="36" x2="172.5054" y1="325.1989" y2="325.1989" />
+      <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="8.5757" x="43" y="320.4567">5</text>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="105.9297" x="55.5757" y="320.4567">remove("Ferrari")</text>
+    </g>
+    <polygon fill="#FEFFDD" points="130,338.1989,226,338.1989,236,349.1989,226,361.1989,130,361.1989,120,349.1989,130,338.1989" style="stroke:#181818;stroke-width:0.5;" />
+    <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="92.8184" x="132" y="354.7673">({&#129364;, &#127950;&#65039;}, {&#127950;&#65039;})</text>
+    <g class="message" data-participant-1="User" data-participant-2="NodeB">
+      <polygon fill="#555555" points="239.5718,393.82,249.5718,397.82,239.5718,401.82,243.5718,397.82" style="stroke:#555555;stroke-width:1;" />
+      <line style="stroke:#555555;stroke-width:1;" x1="36" x2="245.5718" y1="397.82" y2="397.82" />
+      <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="8.5757" x="43" y="393.0778">7</text>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="132.2788" x="55.5757" y="393.0778">`read`/`checkout`()</text>
+    </g>
+    <g class="message" data-participant-1="NodeB" data-participant-2="User">
+      <polygon fill="#555555" points="47,423.1306,37,427.1306,47,431.1306,43,427.1306" style="stroke:#555555;stroke-width:1;" />
+      <line style="stroke:#555555;stroke-width:1;" x1="41" x2="250.5718" y1="427.1306" y2="427.1306" />
+      <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="8.5757" x="53" y="422.3884">8</text>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="117.5879" x="65.5757" y="422.3884">&#128666;: {&#129364;, &#127950;&#65039;} &#128556;!!!</text>
+    </g>
+    <!--SRC=[bLDBRzD04BxlhvYOGn8fY90IASe1gIcgUcYZ2iezOtkIBh5tpNeT7b6FbJXH8N50lUI4k7206x-7Fq1-0hF6KTmy37WlrdoF-MOVTJZJ8HdLWjI-YMHw2Iczp4W51A74YS4Onjh0qTCd5t1Cng2HGAynJY8IeWuN1bMQe25bmSTWEZ4wKs4kyICz0QaiiOcLMebqAXLJsN7DFD8HK-tQnPcUex4oa0coQPvAJKhYLRuoQou01XkczyOzjnoY3OzOL7izLphMoXQ5JgTJ59x9jmIT5Jp4cC0xeMX6t0TXI1bvZ9rZ678YUDWMLoxjeJ7w5I1F7SanSLYg29sJYyRTRdS7uvHDJjdaJcZVzwkeUoRdS4Djg-8uU5lDNn3iOvTZKPlQsDx3B6tnmS511IdVzaUz2iRkezWXEACqnKcLfWxFKmAAzGkPtz9aVOlIl80Gw3Z1mBOWpby6H5fFHOa7tdBnvOC7c3elimbTV_lruoP7Xwm_t8A_b-6149XPhRBOPoVX_E3-up_AFl1DQtY9jcYrrnGdoXscdZ6bm1lpvUBpnwiM_7nttRmZ7ln5FAWIhpeNxxsYTGkMYvltF51LXhqsWt-ouMQ6psj6_njellhTYZKoXE7emIYuf62gCpjgD4KEEOxZze5zRc_xi64AhlxfQwrM4xy1]-->
+  </g>
+    <polygon style="fill:#FF0000;stroke:#FF0000" class="st4" points="244.3 433.3 251.6 441.3 240.8 440.5 246.2 438.7 244.3 433.3" />
+  <line class="st3" x1="36" y1="340.6" x2="245.5718" y2="438.7" style="stroke:#FF0000"/>
+  <!-- <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="105.9297" x="55.5757" y="320.4567">remove("Ferrari")</text> -->
+  <text class="st6" transform="translate(55.3 345) rotate(26)">
+    <tspan fill="#FF0000" class="st11" x="0" y="0">remove(&quot;Ferrari&quot;</tspan>
+    <tspan x="97.6" y="0">)</tspan>
+  </text>
+  <text class="st5" transform="translate(43 340) rotate(21)">
+    <tspan fill="#FF0000" x="0" y="0">6</tspan>
+  </text>
+</svg>
