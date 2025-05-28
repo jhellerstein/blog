@@ -5,6 +5,7 @@ coverImage: ./potato-ferrari.png
 ---
 
 import Callout from '../../../src/components/Callout'
+import { withPrefix } from "gatsby"
 
 Ever used a CRDT, thought you were safe, and—boom—you bought a Ferrari you didn't mean to? It could happen to you!
 
@@ -69,7 +70,7 @@ $$
 
 Any time you see a $\neg\exists$ (or its doppelganger, $\forall$) in distributed logic, *beware!* One rogue message — *a single counter-example* — can arrive at any time to invalidate the property.
 
-👉 **Termination ("eventuality") is non-monotonic**. it can be true over a certain set of information, but become false if more data arrives.
+👉 **Termination ("eventuality") is non-monotonic**. It can be true over a certain set of information, but become false if more data arrives.
 
 The [CALM Theorem](https://cacm.acm.org/research/keeping-calm/) says that eventual consistency without coordination is possible *if and only if* the program specification is monotonic. Thus (via CALM):
 
@@ -80,22 +81,22 @@ So ... in coordination-free systems, you can never know when "eventual" has arri
 <details>
 <summary>Click for a review of monotonicity.</summary>
 
-Given a function $f:S \rightarrow T$, where $S$ and $T$ are ordered domains, we say that $f$ is **monotonic** if:
+Given a function $f:S \rightarrow T$, where $S$ and $T$ are ordered domains, we say that $f$ is **monotone** (or **monotonic**) if:
 
 $$
 x \le y \implies f(x) \le f(y)
 $$
 
-Intuitively, a monotonic function *preserves order*: it guarantees that if the input gets "bigger", then the output gets no smaller.
+Intuitively, a monotone function *preserves order*: it guarantees that if the input gets "bigger", then the output gets no smaller.
 
-Monotonicity is often used in logic, where our domains $S$ and $T$ contain sets of facts. Given an input set $x$, a logical function $f$ produces a set of *conclusions*, $f(x)$. If $f$ is monotonic, $x \subseteq y \implies f(x) \subseteq f(y)$: that is, $f(y)$ contains all the facts in $f(x)$ and perhaps more. 
+Monotonicity is often used in logic, where our domains $S$ and $T$ contain sets of facts. Given an input set $x$, a logical function $f$ produces a set of *conclusions*, $f(x)$. If $f$ is monotone, $x \subseteq y \implies f(x) \subseteq f(y)$: that is, $f(y)$ contains all the facts in $f(x)$ and perhaps more. 
 
-In practical terms, if we think of $f$ as a process running over a growing stream of facts, we can say this: *once an output fact is concluded by a monotonic function, additional input facts will not invalidate that conclusion*.
+In practical terms, if we think of $f$ as a process running over a growing stream of facts, we can say this: *once an output fact is concluded by a monotone function, additional input facts will not invalidate that conclusion*.
 
 You can see why this is useful in a distributed system! 
 
-1. Monotonic functions allow for correct, wait-free, streaming computation.
-2. For logical monotonic functions, the truth of each conclusion is invariant in the face of additional input.
+1. Monotone functions allow for correct, wait-free, streaming computation.
+2. For logical monotone functions, the truth of each conclusion is invariant in the face of additional input.
 </details>
 
 
@@ -158,7 +159,7 @@ So what could go wrong?
   boxShadow: "0 2px 8px #0001",
   padding: "1rem"
 }}>
-  <img src="/img/ferrari-diagonal.svg" alt="CRDT Ferrari Sequence Diagram" style={{ width: "85%", display: "block" }} />
+  <img src={withPrefix("/img/ferrari-diagonal.svg")} alt="CRDT Ferrari Sequence Diagram" style={{ width: "85%", display: "block" }} />
 </div>
 Here's an example of what could go wrong, from our [Keep CALM and CRDT On](https://www.vldb.org/pvldb/vol16/p856-power.pdf)  paper:
 
@@ -177,6 +178,11 @@ The CRDT-based cart is replicated, and unfortunately replica `B` receives `check
 
 👉 **Merges are safe; reads are not.** 2P-Sets? Nearly useless for safe reads.
 ### What about Simpler CRDTs?
+You might be saying:
+
+*Well, 2P-sets use a *set difference* operator, which is clearly non-monotonic. The CALM Theorem warned us that non-monotonic operations require coordination for consistency! 
+But surely a plain old grow-only set is safe to read? After all, its `read` function looks nice and monotonic!*
+
 <div style={{
   float: "right",
   width: "320px",
@@ -187,12 +193,8 @@ The CRDT-based cart is replicated, and unfortunately replica `B` receives `check
   boxShadow: "0 2px 8px #0001",
   padding: "1rem"
 }}>
-  <img src="/img/ingredients.svg" alt="CRDT Ingredient Sequence Diagram" style={{ width: "100%", display: "block" }} />
+  <img src={withPrefix("/img/ingredients.svg")} alt="CRDT Ingredient Sequence Diagram" style={{ width: "100%", display: "block" }} />
 </div>
-You might be saying:
-
-*Well, 2P-sets use a *set difference* operator, which is clearly non-monotonic. The CALM Theorem warned us that non-monotonic operations require coordination for consistency! 
-But surely a plain old grow-only set is safe to read? After all, its `read` function looks nice and monotonic!*
 
 You'd be right that the `read` is monotonic:
 ```rust
@@ -226,7 +228,7 @@ Now suppose replica `B` merges some more stuff:
 c.merge({'bleach', 'Paxos'})
 ```
 Merging in more stuff transitions replica `A` back from `edible` to `!edible`.
-Even though `c` grows monotonically, `edible` is not a monotonic function over `c`,
+Even though `c` grows monotonically, `edible` is not a monotone function over `c`,
 so the result of `edible(c)` toggles from false to true to false at node `A`!
 
 👉 **The general point: even monotonic `read`s can lead to non-monotonic conclusions in downstream code.**
