@@ -1,0 +1,43 @@
+@startuml
+
+skinparam backgroundColor transparent
+
+skinparam sequenceParticipant {
+  MinimumWidth 80
+  MaxWidth 80
+  BackgroundColor #f8f8f8
+  BorderColor #888
+  FontColor #222
+  FontSize 28
+  FontName "Helvetica Neue"
+  Padding 10
+}
+
+skinparam sequenceArrowColor #555
+skinparam sequenceLifeLineBorderColor #bbb
+skinparam sequenceLifeLineBackgroundColor #f8f8f8
+
+skinparam sequenceNoteBackgroundColor #ffffcc
+skinparam sequenceNoteBorderColor #e0e0a0
+skinparam sequenceNoteFontColor #333
+skinparam sequenceNoteFontSize 48
+skinparam sequenceNoteFontName "Helvetica Neue"
+
+skinparam sequenceMessageFontName "Helvetica Neue"
+
+participant "👩🏽‍💻" as User
+participant "🅰️" as NodeA
+participant "🅱️" as NodeB
+
+autonumber
+
+Hnote over NodeA: ⊤
+Hnote over NodeB: ⊥
+User -> NodeA: DropTop
+NodeA -> NodeB: merge()
+Hnote over NodeB: ⊤
+NodeA -> NodeA: Update(DropTop)
+Hnote over NodeA: a
+NodeB -> NodeA: merge()
+Hnote over NodeA: ⊤
+@enduml

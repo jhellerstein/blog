@@ -4,9 +4,6 @@ import { withPrefix } from "gatsby";  // Add this import
 import "../styles/global.css";
 
 const Layout = ({ children }) => {
-  const location = typeof window !== "undefined" ? window.location.pathname : "";
-  const isHome = location === "/" || location === "/blog/" || location === "/blog";
-
   return (
     <>
       <div className="banner-hero">

@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" data-diagram-type="SEQUENCE" height="422px" preserveAspectRatio="none" style="width:310px;height:422px;" version="1.1" viewBox="0 0 310 422" width="310px" zoomAndPan="magnify">
+  <defs />
+  <g>
+    <g>
+      <title>&#128105;&#127997;&#8205;&#128187;</title>
+      <rect fill="#000000" fill-opacity="0.00000" height="316.7949" width="8" x="46" y="53.404" />
+      <line style="stroke:#BBBBBB;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="50" x2="50" y1="53.404" y2="370.1989" />
+    </g>
+    <g>
+      <title>&#127344;&#65039;</title>
+      <rect fill="#000000" fill-opacity="0.00000" height="316.7949" width="8" x="138.1875" y="53.404" />
+      <line style="stroke:#BBBBBB;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="141.6543" x2="141.6543" y1="53.404" y2="370.1989" />
+    </g>
+    <g>
+      <title>&#127345;&#65039;</title>
+      <rect fill="#000000" fill-opacity="0.00000" height="316.7949" width="8" x="273.4858" y="53.404" />
+      <line style="stroke:#BBBBBB;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="276.9526" x2="276.9526" y1="53.404" y2="370.1989" />
+    </g>
+    <g class="participant participant-head" data-participant="User">
+      <rect fill="#F8F8F8" height="47.404" rx="2.5" ry="2.5" style="stroke:#888888;stroke-width:0.5;" width="43.0664" x="25" y="5" />
+      <text fill="#222222" font-family="Helvetica Neue" font-size="28" lengthAdjust="spacing" textLength="56" x="32" y="39.44">&#128105;&#127997;&#8205;&#128187;</text>
+    </g>
+    <g class="participant participant-tail" data-participant="User">
+      <rect fill="#F8F8F8" height="47.404" rx="2.5" ry="2.5" style="stroke:#888888;stroke-width:0.5;" width="43.0664" x="25" y="369.1989" />
+      <text fill="#222222" font-family="Helvetica Neue" font-size="28" lengthAdjust="spacing" textLength="56" x="32" y="403.6389">&#128105;&#127997;&#8205;&#128187;</text>
+    </g>
+    <g class="participant participant-head" data-participant="NodeA">
+      <rect fill="#F8F8F8" height="47.404" rx="2.5" ry="2.5" style="stroke:#888888;stroke-width:0.5;" width="43.0664" x="120.6543" y="5" />
+      <text fill="#222222" font-family="Helvetica Neue" font-size="28" lengthAdjust="spacing" textLength="29.0664" x="127.6543" y="39.44">&#127344;&#65039;</text>
+    </g>
+    <g class="participant participant-tail" data-participant="NodeA">
+      <rect fill="#F8F8F8" height="47.404" rx="2.5" ry="2.5" style="stroke:#888888;stroke-width:0.5;" width="43.0664" x="120.6543" y="369.1989" />
+      <text fill="#222222" font-family="Helvetica Neue" font-size="28" lengthAdjust="spacing" textLength="29.0664" x="127.6543" y="403.6389">&#127344;&#65039;</text>
+    </g>
+    <g class="participant participant-head" data-participant="NodeB">
+      <rect fill="#F8F8F8" height="47.404" rx="2.5" ry="2.5" style="stroke:#888888;stroke-width:0.5;" width="43.0664" x="255.9526" y="5" />
+      <text fill="#222222" font-family="Helvetica Neue" font-size="28" lengthAdjust="spacing" textLength="29.0664" x="262.9526" y="39.44">&#127345;&#65039;</text>
+    </g>
+    <g class="participant participant-tail" data-participant="NodeB">
+      <rect fill="#F8F8F8" height="47.404" rx="2.5" ry="2.5" style="stroke:#888888;stroke-width:0.5;" width="43.0664" x="255.9526" y="369.1989" />
+      <text fill="#222222" font-family="Helvetica Neue" font-size="28" lengthAdjust="spacing" textLength="29.0664" x="262.9526" y="403.6389">&#127345;&#65039;</text>
+    </g>
+    <polygon fill="#FEFFDD" points="135,68.404,148,68.404,158,79.404,148,91.404,135,91.404,125,79.404,135,68.404" style="stroke:#181818;stroke-width:0.5;" />
+    <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="9.7563" x="137" y="84.9724">&#8868;</text>
+    <polygon fill="#FEFFDD" points="270,101.7145,283,101.7145,293,112.7145,283,124.7145,270,124.7145,260,112.7145,270,101.7145" style="stroke:#181818;stroke-width:0.5;" />
+    <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="9.7563" x="272" y="118.2829">&#8869;</text>
+    <g class="message" data-participant-1="User" data-participant-2="NodeA">
+      <polygon fill="#555555" points="130.1875,147.3356,140.1875,151.3356,130.1875,155.3356,134.1875,151.3356" style="stroke:#555555;stroke-width:1;" />
+      <line style="stroke:#555555;stroke-width:1;" x1="50" x2="136.1875" y1="151.3356" y2="151.3356" />
+      <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="8.5757" x="57" y="146.5935">1</text>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="55.6118" x="69.5757" y="146.5935">DropTop</text>
+    </g>
+    <g class="message" data-participant-1="NodeA" data-participant-2="NodeB">
+      <polygon fill="#555555" points="265.4858,176.6462,275.4858,180.6462,265.4858,184.6462,269.4858,180.6462" style="stroke:#555555;stroke-width:1;" />
+      <line style="stroke:#555555;stroke-width:1;" x1="142.1875" x2="271.4858" y1="180.6462" y2="180.6462" />
+      <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="8.5757" x="149.1875" y="175.904">2</text>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="48.5024" x="161.7632" y="175.904">merge()</text>
+    </g>
+    <polygon fill="#FEFFDD" points="270,193.6462,283,193.6462,293,204.6462,283,216.6462,270,216.6462,260,204.6462,270,193.6462" style="stroke:#181818;stroke-width:0.5;" />
+    <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="9.7563" x="272" y="210.2145">&#8868;</text>
+    <g class="message" data-participant-1="NodeA" data-participant-2="NodeA">
+      <line style="stroke:#555555;stroke-width:1;" x1="142.1875" x2="184.1875" y1="243.2673" y2="243.2673" />
+      <line style="stroke:#555555;stroke-width:1;" x1="184.1875" x2="184.1875" y1="243.2673" y2="256.2673" />
+      <line style="stroke:#555555;stroke-width:1;" x1="143.1875" x2="184.1875" y1="256.2673" y2="256.2673" />
+      <polygon fill="#555555" points="153.1875,252.2673,143.1875,256.2673,153.1875,260.2673,149.1875,256.2673" style="stroke:#555555;stroke-width:1;" />
+      <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="8.5757" x="149.1875" y="238.5251">3</text>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="108.7227" x="161.7632" y="238.5251">Update(DropTop)</text>
+    </g>
+    <polygon fill="#FEFFDD" points="136,269.2673,147,269.2673,157,280.2673,147,292.2673,136,292.2673,126,280.2673,136,269.2673" style="stroke:#181818;stroke-width:0.5;" />
+    <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="7.1792" x="138" y="285.8356">a</text>
+    <g class="message" data-participant-1="NodeB" data-participant-2="NodeA">
+      <polygon fill="#555555" points="153.1875,314.8884,143.1875,318.8884,153.1875,322.8884,149.1875,318.8884" style="stroke:#555555;stroke-width:1;" />
+      <line style="stroke:#555555;stroke-width:1;" x1="147.1875" x2="276.4858" y1="318.8884" y2="318.8884" />
+      <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="8.5757" x="159.1875" y="314.1462">4</text>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="48.5024" x="171.7632" y="314.1462">merge()</text>
+    </g>
+    <polygon fill="#FEFFDD" points="135,331.8884,148,331.8884,158,342.8884,148,354.8884,135,354.8884,125,342.8884,135,331.8884" style="stroke:#181818;stroke-width:0.5;" />
+    <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="9.7563" x="137" y="348.4567">&#8868;</text>
+    <!--SRC=[VPB1IiCm7CRlUOfGBzj1g9s3ua5O5Td1bO4EpsdxNmrRavgcKnJ1YnT1H5zWbtdmfZT1V9czW7i4qwwJRgPjwI7Vz_k-_1EQZ2YBYI0HzeW_2WLFMN30nrnWAGXBb0LC8fJyOGbSfC1yw1CXgKzZmYI-GHZtAADH6ftHG9vZsymKSbLQEHlrMqCxUpE7Ym14eTfs9Xrn9Wl1ign2EA7NWAsLxP88iD65yGJK70Ixa8AXl3u90if2l6EYMztS7I7uPT7TRhSrn34Tge_1sboUvzMX5OVJH5mkDRXwVB-ABiy19fZ4h21BrzPgjMgW_2ftxHf2VxsQG0-IX8HrcRZqfnYBwVFROlhqFRzxN4nVlWnC4Zn8G6nIz-y_dq-vw_80El_iZxBj84HIoLaQUQe9TPaw1EOJ4Clm7fu_p3PL9rDVKROttjvVWOU2nwSyHlbofIiq0X52ewajcQtJgcKG1qH2eoXhQWOYUSOfPIfsM0x_2m00]-->
+  </g>
+</svg>
