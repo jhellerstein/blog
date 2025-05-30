@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" data-diagram-type="SEQUENCE" height="359px" preserveAspectRatio="none" style="width:310px;height:359px;" version="1.1" viewBox="0 0 310 359" width="310px" zoomAndPan="magnify">
+  <defs />
+  <g>
+    <g>
+      <title>&#128105;&#127997;&#8205;&#128187;</title>
+      <rect fill="#000000" fill-opacity="0.00000" height="254.1738" width="8" x="46" y="53.404" />
+      <line style="stroke:#BBBBBB;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="50" x2="50" y1="53.404" y2="307.5778" />
+    </g>
+    <g>
+      <title>&#127344;&#65039;</title>
+      <rect fill="#000000" fill-opacity="0.00000" height="254.1738" width="8" x="138.1875" y="53.404" />
+      <line style="stroke:#BBBBBB;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="141.6543" x2="141.6543" y1="53.404" y2="307.5778" />
+    </g>
+    <g>
+      <title>&#127345;&#65039;</title>
+      <rect fill="#000000" fill-opacity="0.00000" height="254.1738" width="8" x="273.4858" y="53.404" />
+      <line style="stroke:#BBBBBB;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="276.9526" x2="276.9526" y1="53.404" y2="307.5778" />
+    </g>
+    <g class="participant participant-head" data-participant="User">
+      <rect fill="#F8F8F8" height="47.404" rx="2.5" ry="2.5" style="stroke:#888888;stroke-width:0.5;" width="43.0664" x="25" y="5" />
+      <text fill="#222222" font-family="Helvetica Neue" font-size="28" lengthAdjust="spacing" textLength="56" x="32" y="39.44">&#128105;&#127997;&#8205;&#128187;</text>
+    </g>
+    <g class="participant participant-tail" data-participant="User">
+      <rect fill="#F8F8F8" height="47.404" rx="2.5" ry="2.5" style="stroke:#888888;stroke-width:0.5;" width="43.0664" x="25" y="306.5778" />
+      <text fill="#222222" font-family="Helvetica Neue" font-size="28" lengthAdjust="spacing" textLength="56" x="32" y="341.0178">&#128105;&#127997;&#8205;&#128187;</text>
+    </g>
+    <g class="participant participant-head" data-participant="NodeA">
+      <rect fill="#F8F8F8" height="47.404" rx="2.5" ry="2.5" style="stroke:#888888;stroke-width:0.5;" width="43.0664" x="120.6543" y="5" />
+      <text fill="#222222" font-family="Helvetica Neue" font-size="28" lengthAdjust="spacing" textLength="29.0664" x="127.6543" y="39.44">&#127344;&#65039;</text>
+    </g>
+    <g class="participant participant-tail" data-participant="NodeA">
+      <rect fill="#F8F8F8" height="47.404" rx="2.5" ry="2.5" style="stroke:#888888;stroke-width:0.5;" width="43.0664" x="120.6543" y="306.5778" />
+      <text fill="#222222" font-family="Helvetica Neue" font-size="28" lengthAdjust="spacing" textLength="29.0664" x="127.6543" y="341.0178">&#127344;&#65039;</text>
+    </g>
+    <g class="participant participant-head" data-participant="NodeB">
+      <rect fill="#F8F8F8" height="47.404" rx="2.5" ry="2.5" style="stroke:#888888;stroke-width:0.5;" width="43.0664" x="255.9526" y="5" />
+      <text fill="#222222" font-family="Helvetica Neue" font-size="28" lengthAdjust="spacing" textLength="29.0664" x="262.9526" y="39.44">&#127345;&#65039;</text>
+    </g>
+    <g class="participant participant-tail" data-participant="NodeB">
+      <rect fill="#F8F8F8" height="47.404" rx="2.5" ry="2.5" style="stroke:#888888;stroke-width:0.5;" width="43.0664" x="255.9526" y="306.5778" />
+      <text fill="#222222" font-family="Helvetica Neue" font-size="28" lengthAdjust="spacing" textLength="29.0664" x="262.9526" y="341.0178">&#127345;&#65039;</text>
+    </g>
+    <polygon fill="#FEFFDD" points="135,68.404,148,68.404,158,79.404,148,91.404,135,91.404,125,79.404,135,68.404" style="stroke:#181818;stroke-width:0.5;" />
+    <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="9.7563" x="137" y="84.9724">&#8868;</text>
+    <polygon fill="#FEFFDD" points="270,101.7145,283,101.7145,293,112.7145,283,124.7145,270,124.7145,260,112.7145,270,101.7145" style="stroke:#181818;stroke-width:0.5;" />
+    <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="9.7563" x="272" y="118.2829">&#8869;</text>
+    <g class="message" data-participant-1="User" data-participant-2="NodeA">
+      <polygon fill="#555555" points="130.1875,147.3356,140.1875,151.3356,130.1875,155.3356,134.1875,151.3356" style="stroke:#555555;stroke-width:1;" />
+      <line style="stroke:#555555;stroke-width:1;" x1="50" x2="136.1875" y1="151.3356" y2="151.3356" />
+      <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="8.5757" x="57" y="146.5935">1</text>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="55.6118" x="69.5757" y="146.5935">DropTop</text>
+    </g>
+    <g class="message" data-participant-1="NodeA" data-participant-2="NodeA">
+      <line style="stroke:#555555;stroke-width:1;" x1="142.1875" x2="184.1875" y1="180.6462" y2="180.6462" />
+      <line style="stroke:#555555;stroke-width:1;" x1="184.1875" x2="184.1875" y1="180.6462" y2="193.6462" />
+      <line style="stroke:#555555;stroke-width:1;" x1="143.1875" x2="184.1875" y1="193.6462" y2="193.6462" />
+      <polygon fill="#555555" points="153.1875,189.6462,143.1875,193.6462,153.1875,197.6462,149.1875,193.6462" style="stroke:#555555;stroke-width:1;" />
+      <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="8.5757" x="149.1875" y="175.904">2</text>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="108.7227" x="161.7632" y="175.904">Update(DropTop)</text>
+    </g>
+    <polygon fill="#FEFFDD" points="136,206.6462,147,206.6462,157,217.6462,147,229.6462,136,229.6462,126,217.6462,136,206.6462" style="stroke:#181818;stroke-width:0.5;" />
+    <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="7.1792" x="138" y="223.2145">a</text>
+    <g class="message" data-participant-1="NodeA" data-participant-2="NodeB">
+      <polygon fill="#555555" points="265.4858,252.2673,275.4858,256.2673,265.4858,260.2673,269.4858,256.2673" style="stroke:#555555;stroke-width:1;" />
+      <line style="stroke:#555555;stroke-width:1;" x1="142.1875" x2="271.4858" y1="256.2673" y2="256.2673" />
+      <text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="8.5757" x="149.1875" y="251.5251">3</text>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="48.5024" x="161.7632" y="251.5251">merge()</text>
+    </g>
+    <polygon fill="#FEFFDD" points="271,269.2673,282,269.2673,292,280.2673,282,292.2673,271,292.2673,261,280.2673,271,269.2673" style="stroke:#181818;stroke-width:0.5;" />
+    <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="7.1792" x="273" y="285.8356">a</text>
+    <!--SRC=[VPB1IiD048RlUOebNjg345CBmOFGAjA33GKjdYV9D2vjTkDcKqKHl7WHfEWBzA87RteJn9Vf2zX7S1FJajPj4dAO___-dTaXoP2o60H4n0D_60gUik20ZxWWKW1Bb8LC6aQon1AyI97vs0CXgKzZO9BS68Iqr-9R0oTxCuUB04MXEauc7N4c2y6sxK8ueTT8x8NjGeJ4xE1eZAeF41TJD9NNWo2WB2GxbYgwbD4eZSve8C-9aojmjQnkTNEtXE2NHUzciwaXZkb0VGnNvlOyhmhTS7bDnELIWwl7zpVHvJdGGWki3MHfhOr6emBALxthL13wzMi2NKmI2AioSUbFCUVJfxVvTF8zktkSJv-_J089wISergdxzv_FIUwwFC3MF_kZRBSD0rB9MHfvwYIZmzGb21-Z-0llaTd3oxhQpjHN8-jDjlSNuA7WyIcFZRmiwVqu08crmgvhMi1gHXqVeGYnLjSqXby0]-->
+  </g>
+</svg>
