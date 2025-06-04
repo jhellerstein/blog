@@ -1,4 +1,322 @@
-<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Async Stream RSS Feed]]></title><description><![CDATA[Async Stream RSS Feed]]></description><link>https://hellerstein.io/blog</link><generator>GatsbyJS</generator><lastBuildDate>Fri, 30 May 2025 04:18:48 GMT</lastBuildDate><item><title><![CDATA[CRDTs #3: Do Not Read!]]></title><description><![CDATA[Ever used a CRDT, thought you were safe, and—boom—you bought a Ferrari you didn't mean to? It could happen to you! The truth is that CRDTs…]]></description><link>https://hellerstein.io/blog/crdt-dont-read/</link><guid isPermaLink="false">https://hellerstein.io/blog/crdt-dont-read/</guid><pubDate>Fri, 23 May 2025 00:00:00 GMT</pubDate><content:encoded>
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Async Stream RSS Feed]]></title><description><![CDATA[Async Stream RSS Feed]]></description><link>https://hellerstein.io/blog</link><generator>GatsbyJS</generator><lastBuildDate>Wed, 04 Jun 2025 19:48:48 GMT</lastBuildDate><item><title><![CDATA[CRDTs #4: Convergence, Determinism, and Inflation]]></title><description><![CDATA[The CRDT literature sometimes leaves room for mathematical ambiguity. Maybe because the bulk of the work tends to be targeted at systems…]]></description><link>https://hellerstein.io/blog/crdt-inflationary/</link><guid isPermaLink="false">https://hellerstein.io/blog/crdt-inflationary/</guid><pubDate>Thu, 29 May 2025 00:00:00 GMT</pubDate><content:encoded>import Callout from &apos;../../../src/components/Callout&apos;
+import { withPrefix } from &quot;gatsby&quot;
+
+
+The CRDT literature sometimes leaves room for mathematical ambiguity. Maybe because the bulk of the work tends to be targeted at systems researchers and developers, like a lot of work on eventual consistency.
+
+The discussion below untangles three subtle but important ideas in CRDT design, which turn out to be interrelated:
+
+1. Determinism vs Convergence guarantees
+2. Early `read`s: lower bounds or not?
+3. Algebraic property requirements for `update` functions.
+
+&lt;Callout type=&quot;warning&quot;&gt;
+The CRDT guarantee of *strong eventual consistency does **not** guarantee determinism!*
+If you want your CRDTs to be deterministic, or you want to treat CRDT `read`s as lower bounds, then your `update` functions must be **inflationary**.
+&lt;/Callout&gt;
+
+&gt; This is the 4th post in a [series](../crdt-intro/) I&apos;m doing on CRDTs. This one is a bit more technical and narrow than my previous CRDT posts, but practitioners should still know about the main conclusions. This post also contains a small formal result that seems novel -- Strong Eventual Consistency does not guarantee determinism! I&apos;d be curious to hear about prior work that makes this point.
+
+---
+
+## Definitions First
+
+Before we get into the details, let&apos;s be a bit careful with our terminology. I&apos;ll assume you&apos;ve seen CRDTs before, but I&apos;ll review the key points while trying to keep this breezy.
+
+### Join Semi-Lattices
+
+You likely remember that CRDTs are related to *lattices* in abstract algebra. Let&apos;s review that.
+
+Let’s suppose we have a set of possible states $S$, equipped with a **join operator** $\sqcup: S \times S \to S$. The join is required to satisfy three properties:
+* **Idempotent**: $x \sqcup x = x$
+* **Commutative**: $x \sqcup y = y \sqcup x$
+* **Associative**: $x \sqcup (y \sqcup z) = (x \sqcup y) \sqcup z$
+
+If you have a set of states and a binary operator satisfying these properties, you have a **join-semilattice**.
+
+From this operator, we can define a **partial order**:
+
+$$
+x \leq y \quad \text{iff} \quad x \sqcup y = y
+$$
+
+This means that applying join never forgets anything. It only moves “upward” in the order induced by join.
+
+### **From Join Semi-Lattices to CRDTs**
+
+A CRDT is essentially a replicated join semi-lattice. 
+To the core mathematical definition we add one more API, an **`update` function** that mutates the state of the CRDT (while of course staying within the state space $S$).  As we&apos;ll see below, these functions can be the source of nondeterminism depending on their algebraic properties. Also, the CRDT literature tends to refer to the join operator as `merge`. (That works for me, as it disambiguates the CRDT term from the unrelated relational join operator from databases.)
+
+Next, we assume an asynchronous **network dissemination service**  that periodically sends a snapshot of one node&apos;s state to another. When state arrives at a destination node, its local CRDT state is mutated to reflect the `merge` of the current state with the message. 
+We&apos;ll assume that every node eventually `merge`s data from every other node directly or indirectly (transitively).
+
+That&apos;s all we need, at the level of detail we&apos;ll pursue here. However, the literature on CRDTs typically highlights a subclass of CRDTs called &quot;op-based&quot; CRDTs. You can read about those in an [earlier post](../crdt-turtles) and I&apos;ll have more to say about them [below](#op-based).
+
+Given this background, let’s move on to define a key property of functions on the lattice domain.
+
+### Inflationary
+We say that a function $f:S \rightarrow S$ over an ordered domain $S$ is **inflationary** if its output is never smaller than its input:
+$$
+x \leq f(x)
+$$
+
+For CRDT discussion, we assume the domain $S$ is the same as that of our semi-lattice, and the partial order $\leq$  is the one from our semi-lattice definition. Inflationary functions never take us &quot;down&quot; in the lattice order.
+
+
+&lt;Callout type=&quot;info&quot;&gt;
+Let’s start with something reassuring: the join operator $x \sqcup y$ is always inflationary in each of its arguments.
+&lt;/Callout&gt;
+
+Why?
+$x \leq x \sqcup y$ because $x \sqcup y$ is an upper bound for $x$.
+
+This is one reason why many CRDT papers don’t emphasize inflationarity: they tend to focus on `merge` operations, and `merge` ($\sqcup$) satisfies the property automatically.
+
+Our issue is going to be the `update` function each node may run between `merge`s. More on that shortly.
+
+But first, let&apos;s define the standard guarantee that CRDTs are designed to provide.
+
+
+### Strong Eventual Consistency (SEC)
+
+The canonical correctness guarantee for CRDTs is **Strong Eventual Consistency (SEC)**, as defined by [Shapiro et al](https://link.springer.com/chapter/10.1007/978-3-642-24550-3_29). It requires that, eventually, all replicas converge to the same state, provided they have seen the same set of `update`s.
+
+The SEC condition includes three properties:
+
+1. **Eventual delivery**: All `update`s eventually reach all replicas.
+2. **Termination**: All operations eventually complete.
+3. **Strong convergence**: If two replicas have received the same set of `update`s, they will reach the same state.
+
+Note that SEC says nothing about ordering of operations; in particular it **does not constrain the interleaving of `update` and `merge`**. Given that dissemination is assumed to be asynchronous, a replica might send its current state before or after applying an `update`. We’ll see how this matters next.
+
+---
+
+## SEC Does Not Guarantee Determinism
+We tend to think of convergence as a property that avoids non-determinism: after all, in a convergent replica system, all the replicas agree on the outcome. But that doesn&apos;t actually mean that they agree on a *deterministic* outcome!
+
+As defined, Strong Eventual Consistency only says that replicas converge *within* a run. It says nothing about whether different executions — with the same set of `updates` and nodes — produce the same final result.
+
+Consider the following function:
+
+$$
+\text{DropTop}(x) = \begin{cases}
+  a &amp; \text{if } x = \top \\
+  x &amp; \text{otherwise}
+\end{cases}
+$$
+
+The $\top$ (&quot;top&quot;) symbol is the standard lattice notation for topmost state in a finite lattice (i.e. the unique join of all the states).
+
+$\text{DropTop}$ is not inflationary: it &quot;drops&quot; from $\top$ to a lower value $a$. If a user applies it once at node `A`, the final result depends on whether `A` sends its state to `B` *before or after* applying the `update`.
+
+**Example: Two Possible Outcomes**
+
+Let $S = \{\bot, a, \top\}$, with $\bot &lt; a &lt; \top$.
+
+* Node A starts at $\top$
+* Node B starts at $\bot$
+* A single user applies $\text{DropTop}$ once on node A
+
+&lt;div className=&quot;diagram-two-floats&quot;&gt;
+  &lt;div className=&quot;diagram-float&quot;&gt;
+    &lt;img src={withPrefix(&quot;/img/crdt-run1.svg&quot;)} alt=&quot;Outcome 1&quot; style={{ width: &quot;85%&quot;, display: &quot;block&quot; }} /&gt;
+    &lt;div className=&quot;diagram-caption&quot;&gt;Run 1&lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div className=&quot;diagram-float&quot;&gt;
+    &lt;img src={withPrefix(&quot;/img/crdt-run2.svg&quot;)} alt=&quot;Outcome 2&quot; style={{ width: &quot;85%&quot;, display: &quot;block&quot; }} /&gt;
+    &lt;div className=&quot;diagram-caption&quot;&gt;Run 2&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+**Run 1**: send first, then `update`
+
+* A **sends** $\top$ to B
+* B **merges**: $\bot \sqcup \top = \top$
+* A **applies** $\text{DropTop}: \top \mapsto a$
+* B **sends** $\top$ to A
+* A **merges**: $a \sqcup \top = \top$
+* Final state: A = $\top$, B = $\top$
+
+**Run 2**: `update` first, then send
+* A **applies** $\text{DropTop}: \top \mapsto a$
+* A **sends** $a$ to B
+* B **merges**: $\bot \sqcup a = a$
+* Final state: A = $a$, B = $a$
+
+Same updates. Same nodes. Same messages. Different orders. Two different converged states.
+
+---
+
+## Inflationarity is Needed for Deterministic Convergence
+
+As we&apos;ve seen, non-inflationary functions like $\text{DropTop}$  may non-deterministically drive the CRDT into one of many possible converged states, which depend on the interleaving of `update`s and messages.
+
+If all `update`s are inflationary, then once a state has moved &quot;up&quot; the lattice, it never moves back down — and that ensures:
+
+* Each replica&apos;s state moves up the lattice.
+* Merging always moves replicas up in the lattice.
+* The final state is the least upper bound of all `update`s.
+
+That last point ensures **determinism**: the final result depends only on the set of `update`s, not their timing.
+
+&lt;Callout type=&quot;warning&quot;&gt;
+**Inflationary `update`s are required for deterministic convergence in CRDTs.**
+&lt;/Callout&gt;
+Non-inflationary `update`s will still converge to some common state, but the choice of converged state will be non-deterministic.
+
+---
+
+## Non-Inflationary Updates Spoil Lower Bounds
+In [the previous post](../crdt-dont-read) I talked about how it&apos;s unsafe to `read` the naked state of a CRDT, but at least 
+a &quot;well-behaved&quot; CRDT provides lower bounds. Well, in addition to providing non-deterministic outcomes,
+**non-inflationary `update`s are &quot;ill-behaved&quot; and do *not* provide lower bounds**.
+
+Imagine you&apos;re writing application logic that reads from a CRDT value during execution.
+
+If the `update` function is inflationary, you have a guarantee: the current state always provides a **lower bound** of the final state. That makes it safe to make assumptions like:
+
+* &quot;This user will never lose this permission.&quot;
+* &quot;This counter will only increase from here.&quot;
+
+But if `update`s are **not** inflationary, those assumptions no longer hold. You might see a high value now — and a lower one later — because your node applied a non-inflationary `update`.
+
+That means your application can&apos;t treat CRDT reads as stable observations in any sense. It must treat every intermediate value as potentially temporary.
+
+&lt;Callout type=&quot;danger&quot;&gt;
+When using non-inflationary `update` functions, CRDT `read` values can be completely arbitrary. Inflationary `update` ensures that CRDT `read` is a lower bound on the final converged state, which is a common assumption in the CRDT literature.
+&lt;/Callout&gt;
+
+&lt;br/&gt;&lt;br/&gt;
+
+### Ensuring Inflationarity
+There is a simple hack to ensure inflationarity, by changing the implementation of the `update` API, or removing it entirely.
+
+The change is as follows. When a user invokes `update(x)`, we do not directly mutate the CRDT state to `x`; rather, we mutate the state to `merge(update(x))`. Because `merge` is inflationary (as discussed above), the effect of updates in this implementation is always inflationary.
+The result is determinism and guaranteed lower bounds, at the cost of a slightly surprising instant/&quot;local&quot; effect from `update`.
+
+If you want the contract with the CRDT programmer to be more explicit, you can simply remove `update` from the API and force developers to invoke `merge` locally. This is nearly the same as the above design, except for type signatures:
+- `merge`$: S \to S$
+- `update`$: U \to (S \to S)$ 
+
+That is, `update` can take values from some other domain $U$ and map them into mutations to $S$. Removing the `update` API  requires programmers to do that mapping at application level, but is more transparent about a semantics that &quot;`merge` always happens immediately to ensure inflationarity&quot;.
+
+
+---
+
+# Additional Technical Material
+Just in case the above wasn&apos;t enough for you, here are a few more points that may be of interest to aficionados!
+
+## &lt;a id=&quot;op-based&quot;&gt; &lt;/a&gt; Brief Note: Op-Based CRDTs are Deterministic
+
+In [a previous post](../crdt-turtles#op-based) I explained how a fully-specified Op-Based CRDT is a join semi-lattice of a particular kind: a grow-only set lattice over the powerset $P(C \times O)$ containing tuples $(c_i, o_i)$, each comprised of a **causal context lattice** of type $C$ and a value from a domain of mutually commutative operations $O$. The &quot;causal context&quot; is typically a vector clock or DAG that dictates which of the other items in the set precede this one in a partial order.
+
+At a gloss, the `update` function of an op-based CRDT takes as input an op $o_i \in O$ and does the following:
+
+1. increment the local causal context to $c_{t+1}$ (e.g. a new vector clock value with the local nodeId&apos;s value incremented) 
+2. add a tuple $(c_{t+1}, o_i)$ to the local set
+
+This is clearly inflationary. From the semi-lattice perspective, we are simply adding an element to a set, so the result of update is a &quot;bigger&quot; set. Similarly, the underlying causal history is growing: 1 node is added, some precedences are added to the causal context, and nothing is taken away.
+
+There are some nuances around &quot;expiring&quot; history from the partial order of ops that I discuss in that same post; they do not change the inflationary nature of Op-Based CRDTs.
+
+&lt;Callout type=&quot;info&quot;&gt;
+**Op-Based CRDTs are deterministic**, because their updates are inflationary by definition.
+&lt;/Callout&gt;
+
+---
+## What About Monotonicity?
+If you know of me from the CALM Conjecture, you might be suprised that I haven&apos;t used the &quot;M&quot; word yet: **monotonicity**. In fact, many authors in this space—myself included—have been imprecise in when we use monotonicity vs inflationarity. Let me clear this up here in this context.
+
+We should start with crisp definitions.
+
+### Monotonicity
+
+$$
+x \leq y \quad \Rightarrow \quad f(x) \leq f(y)
+$$
+
+Monotonicity is a **relational property**: it relates how the ordering on inputs maps to the ordering on outputs. At a gloss, it ensures that the more you put into the input, the more you get in the output.
+
+### Inflationarity
+
+$$
+x \leq f(x)
+$$
+
+Inflationarity is a **pointwise property**: it compares each input directly to its own output. It ensures that applying the function doesn&apos;t discard information from its input.
+
+### So What?
+Well first off, you should know that these two properties are orthogonal: there are functions that are neither, either, or both.
+
+Going back to our $\text{DropTop}$ function. Recall the definition:
+
+$$
+\text{DropTop}(x) = \begin{cases}
+  a &amp; \text{if } x = \top \\
+  x &amp; \text{otherwise}
+\end{cases}
+$$
+
+This is clearly non-inflationary, assuming $a \ne \top$.
+
+&lt;div className=&quot;diagram-float&quot;&gt;
+    &lt;img src={withPrefix(&quot;/img/3-element.svg&quot;)} 
+    alt=&quot;DropTop on a 3-element domain&quot; 
+    style={{ display: &quot;block&quot;, maxHeight: &quot;120px&quot;}} 
+    /&gt;
+&lt;/div&gt;
+
+Let&apos;s consider $\text{DropTop}$ over the domain $S = \{\bot, a, \top\}$ where $\bot \lt a \lt \top$. In this case, we have a non-inflationary function that *is* monotonic!  Let&apos;s work out the details:
+
+- $\bot \leq a$ and $\text{DropTop}(\bot) \leq \text{DropTop}(a)$
+- $a \leq \top$ and $\text{DropTop}(a)\leq \text{DropTop}(\top)$, because $\text{DropTop}(a) = \text{DropTop}(\top) = a$.
+
+
+We&apos;ve seen above that $\text{DropTop}$ leads to non-determinism over the totally ordered domain *even though* it is monotonic. 
+
+But here&apos;s a funny thing: consider the same function over the domain $S = \{\bot, a, b, \top\}$, where the join generates a partial order $\bot \leq \{a, b\} \leq \top$:
+&lt;div className=&quot;diagram-float&quot;&gt;
+    &lt;img src={withPrefix(&quot;/img/4-element.svg&quot;)} 
+    alt=&quot;DropTop on a 4-element domain&quot; 
+    style={{ display: &quot;block&quot;, maxHeight: &quot;120px&quot;}} 
+    /&gt;
+&lt;/div&gt;
+
+In this domain, $\text{DropTop}$ is **non-monotonic!**.  To see it, consider that:
+
+- $ b \leq \top$, but $\text{DropTop}(b) \not\leq \text{DropTop}(\top)$ because $\text{DropTop}(\top) = a$, and $a$ and $b$  are incomparable!
+
+The same scenario we used to show that $\text{DropTop}$ leads to non-determinism in the previous totally-ordered domain shows it leads to non-determinism over this partially ordered domain, where it *is non-monotonic*. 
+
+So: one monotonic example, one non-monotonic example. Neither is inflationary, and both lead to non-deterministic outcomes!  The relevant issue in this situation should now be clear: **updates need to be inflationary to achieve deterministic outcomes; monotonicity of update functions is irrelevant to determinism**.
+
+### How Does this Relate to the CALM Theorem?
+Great question! First, as a member of the University of California faculty, I&apos;d be happy to change the name to the CALI Theorem if inflation were the key property, rather than monotonicity!
+
+But we should stay CALM.
+
+The &quot;type signatures&quot; of these two terms give us a hint as to when we use them. Inflationarity is a property that only makes sense on functions from a domain to itself (*endofunctions*, if you like fancy math terms). Monotonicity is a property that we can define without regard for the domain and range of a function.
+
+CRDTs are scoped as abstract data types, and hence mostly just capture transformations from state to state within a single domain. Hence inflationarity is an appropriate lens for them.
+
+The CALM Theorem reasons about entire programs, and as such it cannot be defined in terms of inflationarity alone. Usually we want to talk about inflation of inputs to the program over time, and monotonicity of the logic that the program applies to those inputs to produce outputs that may well be in another domain. This is not a new observation; this distinction was made carefully by Ameloot, Neven and van Den Bussche in their [first proof of the CALM Theorem](https://dl.acm.org/doi/10.1145/1989284.1989321).
+
+Returning to CRDTs, it&apos;s easy to show that **semi-lattice join is monotonic** in both inputs. We can also observe that *CRDTs are both inflationary and monotonic in their final, converged outcomes*: if you run a CRDT to convergence on some set of updates $U_1$, and then run it again to convergence on a set of updates $U_2 \geq U_1$, you&apos;ll find the the outcome of the second run is no lower in the lattice than the outcome of the first run—even if your update functions are non-inflationary!
+
+---
+
+## Want More?
+This is not the first writing that distinguishes between inflationary and monotonic functions in the context of distributed or parallel computing.
+
+Here are a couple interesting and relevant prior references I&apos;ve found. I&apos;d love to know of others!
+
+[LVars](https://dl.acm.org/doi/10.1145/2502323.2502326) inventor **Lindsey Kuper** has a 2015 blog post, *[What’s the difference between inflationary and monotonic functions?](https://decomposition.al/blog/2015/08/31/whats-the-difference-between-inflationary-and-monotonic-functions/)* that highlights the confusion many have regarding inflationarity and monotonicity, and gives intuitive examples to demonstrate that they are orthogonal properties.
+
+**Almeida et al.** recently published a CRDT survey (*[Computing Surveys, 2023](https://dl.acm.org/doi/10.1145/3695249)*) that includes a discussion of **inflationary** and **monotonic** updates, and argues that prior work erroneously demanded monotonic update functions, when it should have demanded inflationary functions. In fact, as we discuss above, the SEC guarantee of CRDTs does not demand inflationarity or monotonicity of update! Inflationarity is only necessary if we want determinism or lower bounds (monotonicity of `read`). Moreover, their example (page 18) of a monotonic but non-inflationary function is *decrement*, which is a bit confusing: decrement can be anti-inflationary in some contexts (e.g. a countdown timer based on natural numbers with `min` as the `merge` function), but inflationary in other contexts (e.g. a typical integer/`max` counter semi-lattice.) It&apos;s nicer to have an example like $\text{DropTop}$ that is neither inflationary nor anti-inflationary, and which separates inflationarity and monotonicity directly (by simply expanding the domain).
+
+I am not aware of prior CRDT literature that explicitly discusses the idea that inflationarity is a requirement for deterministic convergence under SEC. If you know of such work, please link to it in a comment below, or reach out if you don&apos;t have a github account!
+
+&gt; Thanks to [Conor Power](https://www.linkedin.com/in/conorpower23/) for sparking my interest in this topic and providing sanity checks on early drafts of this post.</content:encoded></item><item><title><![CDATA[CRDTs #3: Do Not Read!]]></title><description><![CDATA[Ever used a CRDT, thought you were safe, and—boom—you bought a Ferrari you didn't mean to? It could happen to you! The truth is that CRDTs…]]></description><link>https://hellerstein.io/blog/crdt-dont-read/</link><guid isPermaLink="false">https://hellerstein.io/blog/crdt-dont-read/</guid><pubDate>Fri, 23 May 2025 00:00:00 GMT</pubDate><content:encoded>
 import Callout from &apos;../../../src/components/Callout&apos;
 import { withPrefix } from &quot;gatsby&quot;
 
