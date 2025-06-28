@@ -59,7 +59,7 @@ export const pageQuery = graphql`
     }
     allMdx(sort: [
     { frontmatter: { date: DESC } }
-    { frontmatter: { order: DESC } }
+    { frontmatter: { order: ASC } }
     ]
   ) {
       nodes {
