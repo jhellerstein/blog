@@ -233,7 +233,7 @@ If you're in Rust, check out [Hydro](https://hydro.run): we're working on these 
 
 Are there any functions that can safely examine CRDT state? Yes indeed! Monotonicity to the rescue.
 
-Specificaly, since the value of a properly-written CRDT should only go up over time, CRDTs give you trustworthy *lower bounds*. Just don't treat a lower bound as a final answer—a lower bound is a special type,
+Specifically, since the value of a properly-written CRDT should only go up over time, CRDTs give you trustworthy *lower bounds*. Just don't treat a lower bound as a final answer—a lower bound is a special type,
 which you can only compare using `<=`! In particular, you can't test for equality (`==`) with a lower bound. 
 
 In addition, *you can expose monotone functions on CRDTs* to safely compute on their evolving state. 
