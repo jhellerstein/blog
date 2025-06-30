@@ -16,7 +16,7 @@ module.exports = {
       summary: `UC Berkeley CS Prof.<br /><a href="https://hydro.run">Hydro</a>-ologist.`,
     },
     description: ``,
-    siteUrl: `https://hellerstein.io/blog`,
+    siteUrl: `https://jhellerstein.github.io/blog`, // <-- update this line
     social: {
       twitter: `joe_hellerstein`,
       github: `jhellerstein`,
