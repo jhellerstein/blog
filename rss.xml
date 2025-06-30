@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Async Stream RSS Feed]]></title><description><![CDATA[Async Stream RSS Feed]]></description><link>https://hellerstein.io/blog</link><generator>GatsbyJS</generator><lastBuildDate>Sat, 28 Jun 2025 02:13:58 GMT</lastBuildDate><item><title><![CDATA[Tips on Research]]></title><description><![CDATA[As a complement to my last post, I thought I'd write a follow-up with some constructive advice. No point complaining about negativity if you…]]></description><link>https://hellerstein.io/blog/research-tips/</link><guid isPermaLink="false">https://hellerstein.io/blog/research-tips/</guid><pubDate>Fri, 27 Jun 2025 00:00:00 GMT</pubDate><content:encoded>
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Async Stream RSS Feed]]></title><description><![CDATA[Async Stream RSS Feed]]></description><link>https://hellerstein.io/blog</link><generator>GatsbyJS</generator><lastBuildDate>Mon, 30 Jun 2025 01:22:43 GMT</lastBuildDate><item><title><![CDATA[Tips on Research]]></title><description><![CDATA[As a complement to my last post, I thought I'd write a follow-up with some constructive advice. No point complaining about negativity if you…]]></description><link>https://hellerstein.io/blog/research-tips/</link><guid isPermaLink="false">https://hellerstein.io/blog/research-tips/</guid><pubDate>Fri, 27 Jun 2025 00:00:00 GMT</pubDate><content:encoded>
 As a complement to my last post, I thought I&apos;d write a follow-up with some constructive advice. 
 No point complaining about negativity if you don&apos;t offer some positive alternatives!
 
@@ -647,7 +647,7 @@ If you&apos;re in Rust, check out [Hydro](https://hydro.run): we&apos;re working
 
 Are there any functions that can safely examine CRDT state? Yes indeed! Monotonicity to the rescue.
 
-Specificaly, since the value of a properly-written CRDT should only go up over time, CRDTs give you trustworthy *lower bounds*. Just don&apos;t treat a lower bound as a final answer—a lower bound is a special type,
+Specifically, since the value of a properly-written CRDT should only go up over time, CRDTs give you trustworthy *lower bounds*. Just don&apos;t treat a lower bound as a final answer—a lower bound is a special type,
 which you can only compare using `&lt;=`! In particular, you can&apos;t test for equality (`==`) with a lower bound. 
 
 In addition, *you can expose monotone functions on CRDTs* to safely compute on their evolving state. 
