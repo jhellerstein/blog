@@ -13,7 +13,7 @@ module.exports = {
     title: `Async Stream`,
     author: {
       name: `Joseph M. Hellerstein`,
-      summary: `UC Berkeley CS Prof.<br /><a href="https://hydro.run">Hydro</a>-ologist.`,
+      summary: `UC Berkeley CS Prof.<br />AWS VP/Distinguished Scientist<br /><a href="https://hydro.run">Hydro</a>-ologist.`,
     },
     description: ``,
     siteUrl: `https://jhellerstein.github.io/blog`, // <-- update this line
