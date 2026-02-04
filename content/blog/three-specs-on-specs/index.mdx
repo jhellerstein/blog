@@ -1,0 +1,322 @@
+---
+title: "Three Lenses on Coordination"
+date: 2026-02-03
+coverImage: ./3specs.png
+---
+
+import Callout from '../../../src/components/Callout'
+import { withPrefix } from "gatsby"
+
+# Three Sets of Specs (for Staying in Spec)
+
+## Opening: from carving futures to staying within spec
+
+In the last post I talked about how systems formalisms are like sculpting with 
+a chisel: we remove behaviors we don’t want, and what remains is correct.
+This subtractive view shows up as system invariants. Concurrent actions
+shouldn’t conflict. Replicas shouldn’t drift beyond reconciliation.
+Deadlocks should be impossible.
+In short, systems have to stay within specification.
+
+In this post we turn our attention to the work at hand:
+*When is staying within spec easy, and when is it hard?*.
+
+If you work on systems, you’ve almost certainly felt that some of these
+invariants seem to maintain themselves, while others require careful
+design and constant vigilance. They look similar on the surface, but
+behave very differently in practice.
+
+This can be hard to reason about because the same underlying difficulty
+keeps reappearing in different guises. Sometimes it shows up as waiting.
+Sometimes as ordering. Sometimes as questions about what the system
+exposes to observers, and when.
+
+In this post, I’ll look at these issues through three different pairs of
+"specs"—three ways engineers tend to first *notice* that staying within spec
+has become tricky:
+
+1. **Waiting**: when do we have to wait, and what are we waiting for?
+2. **Ordering**: how much order do we really need to impose?
+3. **Commitment**: what kinds of claims does the system expose to observers, and stick with?
+
+We won’t do formal theory, and we won’t build protocols. The goal is to
+connect these different viewpoints and show how they fit together.
+Only at the end will we return to a practical question systems people
+care about: when do we actually need extra machinery—and when don’t we?
+
+---
+
+## Lens 1: Waiting. “Come one vs. Come all”
+
+We don’t like to wait in computing, but sometimes we *have* to in order to stay within spec.
+Waiting is undesirable for many reasons: added latency, context-switch overheads,
+risks of unavailability or deadlock. But at bottom, there are only two fundamental *reasons* we wait:
+
+1. Waiting for something to happen  
+2. Waiting to know that nothing else will happen
+
+Let's take these one at a time.
+
+### Waiting for something
+The first category is the familiar one. The clearest example is a *data dependency*.
+If my job is to compute the function `x + y`, I have to wait until the values of `x`
+and `y` are available (and perhaps the instruction for `+`, if we’re thinking at the chip level).
+That’s easy to understand, and it’s easy to implement. The computation becomes ready exactly
+when its inputs arrive.
+
+So far so good. But many cases of “waiting for something to happen”
+*feel* more complicated: they're not about passing data, they involve some
+notion of "control" messages. Nonetheless, many of these cases fall in this same category.
+
+One that students often ask about is message acknowledgment. I send you a message:
+“`2 + 2 = 4`.” Once I receive an `ack: 2 + 2 = 4` from you, I know you’ve received it,
+and I can proceed with that knowledge in hand—perhaps freeing the memory holding the
+inputs and output. Until then, I’m waiting at your mercy. If you’re slow to respond,
+I’m stuck. This can feel like a different kind of waiting—after all, I'm waiting for
+“control” messages that are irrelevant to the "data" in my computation.
+
+But this setting is not materially different from a function call. In a single-threaded program,
+if my code calls a (local) function `x + y`, I can’t proceed as if `x + y` has completed
+until the function returns. The return isn’t permission or agreement; it’s evidence that the work I
+depend on has finished. The distributed acknowledgment plays the same role: it’s the signal
+that the step I depend on has completed.
+
+A function return doesn’t involve another machine, but the need to wait is already there.
+The distributed case doesn’t introduce a new kind of dependency—it just stretches an existing one
+across a network.
+
+These ‘waiting for something’ cases are all instances of causal dependence on available evidence:
+once the needed event is observed, the waiting is over.
+
+### Waiting for nothing…or everyone
+
+As a contrast, consider a different scenario: distributed termination detection.
+
+Imagine I’ve paid for a global network of machines to work on a problem
+for me, and I want to know when that computation is finished.
+Intuitively, the computation is done when two conditions both hold:
+(i) no machine is currently taking steps on my behalf, and (ii) there
+are no messages in flight that could trigger further steps.
+
+That sounds reasonable—but how do I establish those facts?
+Who’s to say that some machine won’t wake up a minute from now—or a year
+from now—and resume work? Who’s to say that a message isn’t delayed
+somewhere in the network, ready to reignite the computation?
+
+What I’m waiting for here is very different from the earlier examples.
+I’m not waiting for a particular event to arrive. I’m waiting for a
+guarantee that *nothing else will happen*. Formally, what I want to know
+is something like:
+
+> There exists no machine still working for me, and there exists no
+> message in flight on my behalf.
+
+That kind of claim doesn’t follow from causality. Causality tells me how
+events relate once they happen; it doesn’t tell me that no further events
+are possible.
+
+Put differently, “nothing exists” is a universal claim (hello, DeMorgan!). To conclude
+that no machine is still working, I need confirmation from every
+machine. Waiting for nothing quietly turns into waiting to hear from
+everyone.
+
+That reframing explains why this kind of waiting feels so different. In
+the earlier cases, progress was triggered by arrival. Here, progress
+depends on establishing a global absence. And absences don’t announce
+themselves.
+
+This also exposes two immediate complications. First, I need to know who
+counts as “everyone.” If machines can join dynamically, or if the set of
+participants isn’t fixed, the target keeps moving. Second, even if I do
+know the full roster, what happens if one machine is slow, unreachable,
+or has failed? Am I allowed to proceed without hearing from it? On what
+basis?
+
+These questions simply don’t arise when waiting for something to happen.
+Once an input arrives, the dependency is satisfied and computation can
+move forward locally. Waiting for non-arrival, by contrast, asks the
+system to make a claim about the future: that no further relevant events
+will occur.
+
+This distinction—between waiting for arrival and waiting for guaranteed
+absence—is well known in distributed systems. It shows up in classic
+work on termination detection, and more abstractly in results like CALM,
+which formalize reasoning from positive evidence versus reasoning from absence.
+But even without the theory, the difference is visible operationally.
+One kind of waiting is driven by evidence. The other is driven by
+exhaustion.
+
+And that’s the tension to keep in mind as we move on. Waiting for
+something lets the system react. Waiting for nothing forces the
+system to make a claim about the
+future. Ordering turns out to do the same thing.
+
+---
+
+## Lens 2: Order — partial orders and the cost of total order
+
+Ordering problems often feel different from waiting problems, but
+they create pressure in a similar way. 
+
+Causal events naturally form a partial order: a DAG of events with
+“happens-before” edges. Many events are independent—they race, overlap,
+and arrive in different orders at different machines. In many systems,
+that’s enough. Replicas extend the partial order as events arrive, and the set of
+event vertices and “happens-before” edges accumulates (in arbitrary order) at all replicas.
+This works only because information is added monotonically as evidence arrives,
+and is never retracted.
+
+But sometimes a system asks for more than a partial order. Sometimes it
+wants a *total* order: every event must be placed in a single sequence.
+
+This comes up in very familiar places. Linearizability asks us to
+explain a concurrent execution as if operations happened one at a time.
+Serializability asks us to pretend that transactions ran sequentially.
+In both cases, the goal is to emulate a single-threaded program on top
+of a concurrent or distributed system.
+
+At first glance, this may not seem like a big step. After all, many total
+orders are consistent with a given partial order. Why not just pick one?
+
+The surprise is how sharp the boundary is.
+
+A partial order grows naturally as events arrive. If two events are
+independent, the system can wait. Their relative order doesn’t matter
+yet, and it may never need to be fixed.
+
+A total order doesn’t have that flexibility. It forces the system to
+decide the order of events that race—even when there is no causal reason
+to do so, and even when not all contenders have been seen yet.
+
+Once such a decision is made, it becomes a commitment—an assumption that
+the system must keep true, not a preference or intent.
+Another replica,
+observing the same events in a different order, may make a different
+commitment. Those choices don’t fit together. Reconciling them later
+means undoing something: replaying, rolling back, or preventing the
+divergence from happening in the first place.
+
+This is why systems that promise linearizability or serializability end
+up doing so much extra work. The cost isn’t in maintaining order where
+causality already demands it. The cost is in committing early, before
+the system has seen enough to know which total orders will remain
+compatible with future events.
+
+That’s the tension to keep in mind. Partial orders let the system defer
+decisions. Total order forces it to decide—and to live with the
+consequences.
+
+---
+
+## Lens 3: What the system is willing to stand by
+
+Replication has been implicit in the earlier lenses; now we’ll make it explicit.
+Both waiting and ordering become difficult for the same underlying
+reason, which only shows up clearly once we look at replication.
+
+In a distributed system, there isn’t just one place where events are
+observed or extended. There are many. Different replicas may see events
+in different orders, at different times, and may make progress
+independently. Any statement the system makes has to survive that fact.
+
+In the easy cases, this works out surprisingly well.
+
+As we saw in the previous section, claims like “a happened before b” are
+safe in a replicated system because they can only be strengthened by
+later information, never contradicted.
+Because of this, replicas can extend a partial order independently.
+New information is added to the sets of events and relationships, but never requires earlier
+information to be revisited. Progress at one replica doesn’t put it at odds
+with progress at another.
+
+The hard cases begin when the system wants to say something stronger.
+
+“Nothing else will happen.”
+“This result is final.”
+“This is the total order.”
+
+These statements don’t just summarize the past. They also rule out
+possibilities about the future.
+
+In a total order, the system doesn’t merely assert that
+“event a happened before event b.”
+It also asserts that *nothing else can come between a and b*.
+That second clause is easy to overlook, but it’s doing all the work.
+
+Once a replica makes such a claim, it is committing to a particular
+explanation of the execution and promising that any future events will
+fit into it. In a replicated system, that promise has to be shared.
+
+And it can be broken.
+
+Another replica may still observe a delayed event c that naturally
+belongs between a and b.
+Two replicas may already have committed to incompatible explanations.
+New information may arrive that doesn’t fit the story told so far.
+
+The same pattern shows up with waiting.
+Waiting for arrival works because evidence resolves uncertainty locally,
+and replicas can reconcile later.
+Waiting for non-arrival is harder because it asks all replicas to agree
+that no further relevant events will appear.
+
+Seen this way, the earlier lenses line up.
+
+Partial orders work because they assert only what evidence forces and
+remain silent about everything else.
+Total order is brittle because it requires the system to exclude entire
+classes of future observations.
+
+In all of these cases, the underlying question is the same:
+what kinds of statements can replicas make independently, and what kinds
+of statements require them to act together in order to remain true?
+
+---
+
+## Conclusion: when you need a chisel
+
+Throughout this post, we’ve been looking at how systems stay within
+spec—by ruling out behaviors they won’t allow. What the three lenses
+show is that there are two very different ways this happens.
+
+In the easy cases, possible futures disappear on their own.
+
+When a system reacts to evidence, new events make some futures impossible
+simply by occurring. Once a message arrives, futures in which it never
+arrived are gone. Once a causal relationship is observed (i.e., arrival
+of a piece of evidence establishing dependency), futures that
+violate it are no longer consistent with the history. As information
+accumulates, the space of possible executions shrinks in a way that is
+forced by the inputs themselves.
+
+This is why replicas can diverge temporarily and still reconcile.
+They may see events in different orders, but as they exchange
+information, their views converge. Evidence removes ambiguity on its
+own, without anyone having to declare which futures are allowed.
+
+The hard cases are different.
+
+Here, the system wants to rule out futures that the world has not ruled
+out yet. It wants to say that nothing else will happen, that a result is
+final, or that a particular ordering is settled and cannot be revised.
+Those futures are not impossible—they are merely unwanted.
+
+At that point, the system can no longer rely on monotonic accumulation
+alone. The passage of events will not do the work for it. To stay within
+spec, the system has to actively forbid certain futures and get all
+participants to respect that decision.
+
+That is what we usually call coordination.
+
+Coordination is not about slowness or synchronization for its own sake.
+It is the extra machinery a system needs when correctness depends on
+excluding futures that might otherwise still occur.
+
+This distinction shows up again and again: in transactions and
+isolation levels, in bulk-synchronous execution, and in systems that
+must act before all uncertainty is resolved. Those connections are
+worth exploring, but they’re for later posts.
+
+For now, the takeaway is this. If the futures you want to rule out will
+be ruled out anyway by the arrival of information, staying within spec
+is easy. If they won’t be, the system will need help.
