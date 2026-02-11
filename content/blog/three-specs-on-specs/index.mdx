@@ -16,14 +16,14 @@ shouldn’t conflict, replicas shouldn’t drift beyond reconciliation, and
 deadlocks should be impossible.
 
 In this post we turn our attention to the work at hand:
-*When is staying within spec easy, and when is it hard?*.
+*When is staying within spec easy, and when is it hard?*
 
-This can be hard to reason about because the same underlying difficulty keeps reappearing in different guises.
+This can be tricky to reason about because the same underlying difficulty keeps reappearing in different guises.
 Sometimes it shows up as waiting. Sometimes as ordering. Sometimes as
 questions about what the system exposes to observers, and when.
 
 In this post, I’ll look at these issues through three different pairs of
-"specs"—three ways engineers tend to first *notice* that staying within spec
+spectacles—three ways engineers tend to first *notice* that staying within specification
 has become tricky:
 
 1. **Waiting**: when do we have to wait, and what are we waiting for?
