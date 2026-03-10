@@ -1,4 +1,60 @@
-<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Async Stream RSS Feed]]></title><description><![CDATA[Async Stream RSS Feed]]></description><link>https://jhellerstein.github.io/blog</link><generator>GatsbyJS</generator><lastBuildDate>Wed, 11 Feb 2026 21:47:34 GMT</lastBuildDate><item><title><![CDATA[Coding Agents Meet Distributed Reality]]></title><description><![CDATA[AI is about to write most of the code in the world. Most of the code in the world participates in a distributed system.
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Async Stream RSS Feed]]></title><description><![CDATA[Async Stream RSS Feed]]></description><link>https://jhellerstein.github.io/blog</link><generator>GatsbyJS</generator><lastBuildDate>Tue, 10 Mar 2026 15:22:21 GMT</lastBuildDate><item><title><![CDATA[AI and the Mixed-Consistency Future]]></title><description><![CDATA[There's a growing consensus in the AI tooling world that goes something like this: databases are overkill for AI agents—just use files. You…]]></description><link>https://jhellerstein.github.io/blog/ai-mixed-consistency/</link><guid isPermaLink="false">https://jhellerstein.github.io/blog/ai-mixed-consistency/</guid><pubDate>Tue, 10 Mar 2026 00:00:00 GMT</pubDate><content:encoded>
+There&apos;s a growing consensus in the AI tooling world that goes something like this: *databases are overkill for AI agents—just use files.*
+
+You can see it everywhere. The [OpenClaw framework](https://github.com/open-claw/open-claw) stores all agent memory as markdown files in your project directory—no vector store, no database, just plain text you can edit and version with git. A popular [recent post](https://www.nijho.lt/post/file-based-rag-memory/) on file-based RAG put it bluntly: “I didn&apos;t want a library. I didn&apos;t want a web UI. I wanted a folder.” Cloudflare now [converts HTML to markdown on the fly](https://blog.cloudflare.com/markdown-for-agents/) for AI crawlers, because markdown is 80% fewer tokens than HTML for the same content. And the proliferation of `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, and `.cursorrules` files across every AI-assisted repo tells the same story: the industry has converged on [plain-text context files](https://www.differentiated.io/blog/plain-text-context-files-for-llms) as the interface between humans and AI agents.
+
+The vibe is very [Worse Is Better](https://www.dreamsongs.com/WorseIsBetter.html): skip the ceremony of schemas and query languages, give the LLM a pile of text, and let it figure things out. And you know what? For a lot of use cases, this works. It works *surprisingly* well.
+
+But I think the “just use files” crowd is drawing exactly the right conclusion from exactly half the picture. They&apos;re right about *representation*—and dangerously silent about *concurrency*. That asymmetry is worth unpacking, because it points to something important about the state management challenges ahead for agentic systems, and to deeper open questions that connect concurrency theory to approximation theory.
+
+---
+
+## Why “Worse Is Better” Works (for Reads)
+
+The files-over-databases instinct is correct about something real: LLMs are remarkably tolerant of schema ambiguity and transformation. They are not at all doctrinaire about data models. Hand an LLM a messy JSON blob, a markdown table, or a half-normalized relational dump, and it will cheerfully extract what it needs.
+
+This shouldn&apos;t surprise us. The principled debate about schema was always about two things: (a) integrity under update (cf. normal forms) and (b) performance of queries (and integrity enforcement). LLMs today are not executing large analytical queries or maintaining referential integrity under concurrent updates. They&apos;re reading and synthesizing. For that workload, you&apos;d *hope* they&apos;d be relatively agnostic about representation, and they are.
+
+So yes: for the *read path*—feeding context to an LLM—markdown files in a folder are a perfectly reasonable architecture. The “worse” representation is genuinely better when your consumer is a model that was trained on the entire messy internet. The schema pedants (and I say this as someone who has been a schema pedant) need to update their priors for this use case.
+
+---
+
+## Why “Worse Is Better” Breaks Down (for Writes)
+
+Here&apos;s where the files-over-databases story breaks down. AI is far less tolerant of concurrency issues—and for a reason that I think is deeper than “distributed systems are hard.”
+
+Consider the difference. With schema messiness, the LLM sees ambiguous or denormalized data and interpolates. It&apos;s trained on enormous corpora of messy text, so it has strong priors for resolving ambiguity. The distance between a “clean” interpretation and a “messy” one is usually bounded—you can imagine a loss function that penalizes misinterpretation, and the gradients are well-behaved.
+
+Concurrency is a different animal entirely. When you have race conditions across replicas or agents, one ordering of operations can produce an outcome—i.e. a stored value in your data—that is *arbitrarily distant* from the outcome of another ordering. There&apos;s no smooth interpolation between “Alice&apos;s write landed first” and “Bob&apos;s write landed first”—the outcomes can be in entirely different galaxies of your state space. LLMs are trained to minimize compounding errors in *sequences* drawn from learned distributions, but not in *permutations* with unknown distributions. The error surface isn&apos;t smooth; it&apos;s a minefield.
+
+And this is precisely the regime that “just use files” pushes you toward. Files in a folder have no concurrency control. Git gives you conflict *detection* after the fact, not conflict *prevention*. When two agents write to the same markdown memory file, or when a context summary is being read while another agent is updating it, you&apos;re in the land of arbitrary interleavings—exactly the place where LLMs have no learned priors to fall back on.
+
+---
+
+## Agentic State Is Mixed-Consistency
+
+This matters right now because agentic *AI systems are increasingly dependent on shared, mutable state:* code files, context summaries, RAG knowledge bases, tool outputs, sub-agent outputs, conversation histories, etc. And that state is increasingly distributed—across agents, across sessions, across users.
+
+Some of that state will be amenable to coordination-free approaches. CALM, order-agnostic solutions like CRDTs can handle the cases where convergence is all you need and the merge semantics are well-defined. Append-only logs, monotonically growing sets, last-writer-wins registers for non-critical metadata—these are real and useful.
+
+But a lot of agentic state won&apos;t fit that mold. When two agents refactor the same module, or when a context summary needs to reflect a linear chain of decisions, you need stronger guarantees. The state management for agentic artifacts in general will be *mixed-consistency*: some coordination-free, some serializable, some in between, depending on the semantics of the data and the actions being performed.
+
+We have real work to do here to characterize the state, the actions, and the needed isolation and consistency levels. And there may be new data services to build around that characterization.
+
+---
+
+## The Bridge from Concurrency to Approximation
+
+Here&apos;s the part that I find most intellectually exciting—and most open.
+
+In traditional distributed systems, we think about consistency in binary terms: either a schedule is serializable or it isn&apos;t. Either you coordinated or you didn&apos;t. But if we&apos;re building systems where an LLM is the consumer of the state, it&apos;s time to ask a softer question: *how bad could the resulting inconsistency be?*
+
+If schedules across replicas can differ, what&apos;s the distance between the possible *outcomes*, measured in terms of application semantics? If we had a meaningful measure of that distance, we&apos;d have a loss function. And if we had a loss function, we&apos;d have something an LLM could learn from.
+
+This is a bit notional, I&apos;ll admit. But I think there&apos;s a genuinely relevant question here that may finally force us to build a bridge from concurrency theory to approximation theory. We&apos;ve spent decades with a binary notion of correctness for concurrent schedules. The AI era might demand a continuous one—not because we want to be sloppy, but because we want to be *quantifiably* sloppy, with errors that are bounded and—most importantly—learnable.
+
+That&apos;s a research direction worth digging into. And it&apos;s one where the database and distributed systems communities have a lot to contribute—if we&apos;re willing to revisit some old assumptions about what &quot;correct&quot; means.
+</content:encoded></item><item><title><![CDATA[Coding Agents Meet Distributed Reality]]></title><description><![CDATA[AI is about to write most of the code in the world. Most of the code in the world participates in a distributed system.
  And distributed code…]]></description><link>https://jhellerstein.github.io/blog/codegen-reality/</link><guid isPermaLink="false">https://jhellerstein.github.io/blog/codegen-reality/</guid><pubDate>Wed, 11 Feb 2026 00:00:00 GMT</pubDate><content:encoded>
 AI is about to write most of the code in the world.  
 Most of the code in the world participates in a distributed system.  
