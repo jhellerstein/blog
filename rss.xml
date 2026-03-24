@@ -1,4 +1,94 @@
-<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Async Stream RSS Feed]]></title><description><![CDATA[Async Stream RSS Feed]]></description><link>https://jhellerstein.github.io/blog</link><generator>GatsbyJS</generator><lastBuildDate>Tue, 10 Mar 2026 15:22:21 GMT</lastBuildDate><item><title><![CDATA[AI and the Mixed-Consistency Future]]></title><description><![CDATA[There's a growing consensus in the AI tooling world that goes something like this: databases are overkill for AI agents—just use files. You…]]></description><link>https://jhellerstein.github.io/blog/ai-mixed-consistency/</link><guid isPermaLink="false">https://jhellerstein.github.io/blog/ai-mixed-consistency/</guid><pubDate>Tue, 10 Mar 2026 00:00:00 GMT</pubDate><content:encoded>
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Async Stream RSS Feed]]></title><description><![CDATA[Async Stream RSS Feed]]></description><link>https://jhellerstein.github.io/blog</link><generator>GatsbyJS</generator><lastBuildDate>Tue, 24 Mar 2026 06:07:51 GMT</lastBuildDate><item><title><![CDATA[What Is Coordination, Really?]]></title><description><![CDATA[In an earlier post I argued that coordination is about ruling out futures that the world hasn't ruled out on its own. Waiting, ordering…]]></description><link>https://jhellerstein.github.io/blog/cost-of-committing/</link><guid isPermaLink="false">https://jhellerstein.github.io/blog/cost-of-committing/</guid><pubDate>Wed, 25 Mar 2026 00:00:00 GMT</pubDate><content:encoded>
+import Callout from &apos;../../../src/components/Callout&apos;
+
+In an [earlier post](../three-specs-on-specs/) I argued that coordination is about ruling out futures that the world hasn&apos;t ruled out on its own. Waiting, ordering, and commitment all converge on that idea.
+
+But &quot;ruling out futures&quot; is an observation, not a definition. It tells you what coordination *does* without telling you what it *is*—what the atomic unit is, when it&apos;s needed, or why it&apos;s expensive. To answer those questions, we need to be more precise.
+
+Jim Gray gave us a metaphor that helps. In his classic 1981 paper on [The Transaction Concept](https://jimgray.azurewebsites.net/papers/theTransactionConcept.pdf), he taught us that two-phase commit is a wedding ceremony. The first phase is two vows (&quot;Do you?&quot;...&quot;I do&quot;), and the second is a durable pronouncement (&quot;I now pronounce you...&quot;). And what does a traditional, irrevocable marriage do? It burns futures. Every pair of &quot;I do&quot;s is an innumerable set of &quot;I don&apos;t&quot;s—futures in which the bride and groom marry or hook up with someone else.
+
+The ceremony doesn&apos;t compute anything. It doesn&apos;t communicate new information. It makes a *promise*. And unlike a [chisel stroke](../algs-systems/)—which removes marble and moves on—a marriage is a promise you have to keep every day. The system doesn&apos;t just make a decision and forget about it. It has to *actively prevent* futures that would violate the promise, for as long as the system runs. That ongoing discipline—not the moment of decision—is often what makes coordination expensive.
+
+That&apos;s the intuition. Now let&apos;s make it precise.
+
+---
+
+## Commitment as the Atomic Unit
+
+A *specification* describes what a system is supposed to do. For any given situation—any history of events that has occurred so far—the spec says which outcomes are admissible. Sometimes there&apos;s exactly one admissible outcome for each input (the spec is a function). Sometimes there are many (the spec is a mathematical relation).
+
+A *commitment* is an irrevocable narrowing of the admissible set. It permanently eliminates some outcomes that the spec would otherwise allow. Once made, it can never be taken back—every future action must be consistent with it.
+
+That&apos;s it. That&apos;s the atomic unit of coordination.
+
+A transaction commit is a commitment: it&apos;s a vow to never abort, which eliminates all futures in which the transaction&apos;s effects are invisible. A consensus decision is a commitment: it&apos;s a vow to refuse every other value. A serialization order is a commitment: it&apos;s a vow to reject every other interleaving of concurrent operations.
+
+In every case, there are possible futures in which the promise is broken—futures where the transaction aborts, or a different value is chosen, or a different interleaving is observed. The system must actively prevent those futures from occurring. That active prevention is the operational cost of coordination.
+
+&lt;Callout type=&quot;info&quot;&gt;
+Coordination is not about slowness or synchronization for its own sake. It is the machinery a system needs when correctness depends on excluding futures that might otherwise still occur.
+&lt;/Callout&gt;
+
+---
+
+## Functions Don&apos;t Need Weddings
+
+Here&apos;s the first payoff of thinking about coordination this way: it immediately tells you when coordination is *unnecessary*.
+
+When do you need a wedding? Only when there is more than one eligible match! (For a truly awful movie about a boy and girl stranded on a desert island, I can disrecommend &quot;The Blue Lagoon&quot;. Spoiler: no wedding!) Same idea applies here. If a specification maps every history to exactly one admissible outcome—if it&apos;s a function—then there&apos;s nothing to rule out. You just compute the answer. No vows needed. No futures to burn. The world will reveal the answer on its own as information accumulates.
+
+This is why pure computation, even distributed computation, doesn&apos;t inherently require coordination. (I touched on this distinction [earlier](../algs-systems/)—algorithms compute functions; systems make promises.) If I ask ten machines to each compute a function of their local data and send me the results, and I combine those results with another function, nobody needs to make any promises. The answer is determined by the inputs. There&apos;s no ambiguity to resolve, no choice to make, no future to foreclose.
+
+The moment two or more outcomes are both admissible—the moment the spec becomes a *relation* rather than a function—somebody has to choose. And that choice burns the rest.
+
+---
+
+## What Makes Coordination Hard
+
+If coordination is just &quot;make a commitment,&quot; why is it so expensive in practice?
+
+Because commitments have consequences that cascade.
+
+Gray&apos;s wedding metaphor stops at one couple. But real systems run a whole wedding season—and who can propose in round two depends on who got married in round one.
+
+Consider two transactions, $T_1$ and $T_2$, locked in a conflict cycle—each writes something the other needs. The system has to pick one: if $T_1$ commits, $T_2$ must abort, and vice versa. That&apos;s the first vow.
+
+Now add $T_3$, which reads what $T_1$ wrote. If $T_1$ committed, $T_3$ can proceed—its reads are valid. If $T_1$ aborted, the reads that $T_3$ depended on are gone and it must abort too. The second commitment can&apos;t be made until the first one has landed. Not because the decision is computationally hard—it&apos;s trivial once you know the outcome of round one. But you have to *know* the outcome of round one.
+
+That sequential dependency—where one commitment can&apos;t safely be made until another has landed—is the deeper hardness of coordination. It&apos;s why two-phase commit and consensus have two phases, not one. It&apos;s why serializable transaction processing has latency proportional to contention.
+
+The sequencing isn&apos;t an implementation artifact. It&apos;s forced by the specification. And that raises a question I find very interesting: can we characterize *how much* sequencing a given spec demands? More on that below.
+
+---
+
+## The View from Histories
+
+I want to flag something about the framing above, because it&apos;s the thing that&apos;s been unlocking results for me recently.
+
+Everything I&apos;ve said so far is stated in terms of *histories* (partially ordered sets of events—what has happened so far) and *admissible outcomes* (what the spec considers correct at each history). No programming language (sorry Datalog, TLA+, P and co!) No failure model. No protocol structure. No special hardware. Just: what outcomes does the spec allow, and how do they evolve as events accumulate?
+
+That abstraction is what makes the definition powerful. Most frameworks for reasoning about coordination are tuned for one kind of question. Protocol design frameworks (Paxos, Raft, 2PC) tell you *how* to coordinate but not *whether* you need to. Programming-language analyses like CALM tell you whether a *program* needs coordination, but the answer depends on the program, not just the spec—a non-monotonic implementation might capture a specification that doesn&apos;t intrinsically require coordination. And impossibility results (FLP, CAP) tell you what *can&apos;t* be done, but in bespoke system models that don&apos;t share machinery with the constructive side—you can&apos;t use the same framework to prove an impossibility and design a protocol.
+
+I believe the histories-and-outcomes framing can cover all of these with a single lens—abstract enough to express impossibility theorems and concrete enough to guide implementation choices. Transaction isolation, CAP, consensus impossibility, CALM: they look different on the surface, but underneath they&apos;re all about which commitments a spec requires, and what happens when you try to make them under uncertainty.
+
+Whether that intuition holds up formally is the subject of some work I&apos;ve been doing that I&apos;d like to share in later posts. But the framing itself is what I want to put on the table here.
+
+---
+
+## Two Open Questions
+
+This framing raises two questions that I think are worth dedicated posts.
+
+The first: **when is coordination intrinsically required by a specification?** Not &quot;when does your implementation use coordination&quot;—because implementations can be wasteful. The question is whether the spec *itself* demands it. Is there a test you can apply to a specification, before writing any code, that tells you whether coordination is avoidable? CALM gave one answer for monotonic programs. But CALM was tied to a specific programming-language lens. Can we do better—can we test the *spec* directly, independent of any language or model?
+
+The second: **when coordination is required, how much do you need?** If your spec demands three sequential rounds of commitment, can you get away with two? Is there a meaningful notion of &quot;commitment complexity&quot; that measures the irreducible sequential cost—and is it related to the complexity measures we already know?
+
+I&apos;ve written down my thoughts on both. But they&apos;re for upcoming posts.
+
+For now, the takeaway is this: coordination is commitment. Commitment burns futures. And the structure of those commitments—which depend on which, which can happen in parallel, which must be sequenced—is what determines how much coordination costs.
+
+That structure is an intrinsic property of the specification, not a side-effect of an implementation. That&apos;s what makes it worth studying.
+</content:encoded></item><item><title><![CDATA[AI and the Mixed-Consistency Future]]></title><description><![CDATA[There's a growing consensus in the AI tooling world that goes something like this: databases are overkill for AI agents—just use files. You…]]></description><link>https://jhellerstein.github.io/blog/ai-mixed-consistency/</link><guid isPermaLink="false">https://jhellerstein.github.io/blog/ai-mixed-consistency/</guid><pubDate>Tue, 10 Mar 2026 00:00:00 GMT</pubDate><content:encoded>
 There&apos;s a growing consensus in the AI tooling world that goes something like this: *databases are overkill for AI agents—just use files.*
 
 You can see it everywhere. The [OpenClaw framework](https://github.com/open-claw/open-claw) stores all agent memory as markdown files in your project directory—no vector store, no database, just plain text you can edit and version with git. A popular [recent post](https://www.nijho.lt/post/file-based-rag-memory/) on file-based RAG put it bluntly: “I didn&apos;t want a library. I didn&apos;t want a web UI. I wanted a folder.” Cloudflare now [converts HTML to markdown on the fly](https://blog.cloudflare.com/markdown-for-agents/) for AI crawlers, because markdown is 80% fewer tokens than HTML for the same content. And the proliferation of `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, and `.cursorrules` files across every AI-assisted repo tells the same story: the industry has converged on [plain-text context files](https://www.differentiated.io/blog/plain-text-context-files-for-llms) as the interface between humans and AI agents.
