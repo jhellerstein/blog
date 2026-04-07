@@ -9,7 +9,7 @@ const AboutPage = () => {
       <div className="content">
         <h1>About</h1>
         <p>
-          I work as a computer scientist at UC Berkeley. I
+          I am a computer scientist at UC Berkeley and AWS. I
           focus on data-centric systems and their central role in computing.
           I came up as a database systems researcher, but 
           in recent years I've been particularly focused on the design of 

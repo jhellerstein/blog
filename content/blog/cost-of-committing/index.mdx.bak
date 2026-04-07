@@ -1,0 +1,122 @@
+---
+title: "What Is Coordination, Really?"
+date: 2026-03-25
+coverImage: ./wedont.png
+tags: ["distributed-systems", "coordination", "commitment"]
+---
+
+import Callout from '../../../src/components/Callout'
+
+In an [earlier post](../three-specs-on-specs/) I looked at coordination through three lenses—waiting, ordering, and commitment—and argued that they converge on the same underlying phenomenon: the system needs to rule out futures that the world hasn't ruled out on its own. I ended with a promise: we'd dig into *when* you actually need that extra machinery, and *when* you don't.
+
+Before we get there, I want to step back and nail down what coordination actually *is*. Not operationally—not "it's Paxos" or "it's two-phase commit" or "it's a lock." Those are implementations. I want a definition that works at the level of *what the system is trying to do*, independent of how it does it.
+
+I believe I have one. And it turns out to be surprisingly simple.
+
+---
+
+## Sculpting and Weddings
+
+I've been using a metaphor in this blog: systems are sculptors. They chisel away the negative space—ruling out behaviors they don't want—until only correct behavior remains. Every invariant is a chisel stroke. Every guarantee is a piece of marble that's been removed.
+
+Jim Gray had a different metaphor for the same idea. He taught us that commitment is a wedding ceremony. Two-phase commit is two vows ("Do you?"..."I do") and a pronouncement ("I now pronounce you..."). And what does a traditional, irrevocable marriage do?
+
+It burns futures.
+
+Every "I do" is an innumerable set of "I don'ts"—futures in which you married or hooked up with someone else, or took a vow of celibacy. The ceremony doesn't compute anything. It doesn't communicate new information. It makes a *promise*, and that promise requires ongoing discipline to keep.
+
+The metaphors are related, but I like Gray's better—because it highlights that coordination is a *long-term commitment*. A chisel stroke is instantaneous: you remove the marble and move on. A marriage is a promise you have to keep every day. The system doesn't just make a decision and forget about it. It has to *actively prevent* futures that would violate the promise, for as long as the system runs. That ongoing discipline—not the moment of decision—is what makes coordination expensive.
+
+So there you have it: coordination is a series of commitments to prevent undesirable futures. Not network communication. Not failure handling. *Commitment*: a vow that requires ongoing discipline to avoid breaking.
+
+---
+
+## Commitment as the Atomic Unit
+
+Let's make this precise, without formalism.
+
+A *specification* describes what a system is supposed to do. For any given situation—any history of events that has occurred so far—the spec says which outcomes are admissible. Sometimes there's exactly one admissible outcome (the spec is a function). Sometimes there are many (the spec is a mathematical relation).
+
+A *commitment* is an irrevocable narrowing of the admissible set. It permanently eliminates some outcomes that the spec would otherwise allow. Once made, it can never be taken back—every future action must be consistent with it.
+
+That's it. That's the atomic unit of coordination.
+
+A transaction commit is a commitment: it's a vow to never abort, which eliminates all futures in which the transaction's effects are invisible. A consensus decision is a commitment: it's a vow to refuse every other value. A serialization order is a commitment: it's a vow to reject every other interleaving of concurrent operations.
+
+In every case, there are possible futures in which the promise is broken—futures where the transaction aborts, or a different value is chosen, or a different interleaving is observed. The system must actively prevent those futures from occurring. That active prevention is the operational cost of coordination.
+
+<Callout type="info">
+Coordination is not about slowness or synchronization for its own sake. It is the machinery a system needs when correctness depends on excluding futures that might otherwise still occur.
+</Callout>
+
+---
+
+## Functions Don't Need Weddings
+
+Here's the first payoff of thinking about coordination this way: it immediately tells you when coordination is *unnecessary*.
+
+When do you need a wedding? Only when there is more than one eligible match. Same idea applies here. If a specification maps every history to exactly one admissible outcome—if it's a function—then there's nothing to rule out. You just compute the answer. No vows needed. No futures to burn. The world will reveal the answer on its own as information accumulates.
+
+This is why pure computation, even distributed computation, doesn't inherently require coordination. If I ask ten machines to each compute a function of their local data and send me the results, and I combine those results with another function, nobody needs to make any promises. The answer is determined by the inputs. There's no ambiguity to resolve, no choice to make, no future to foreclose.
+
+The moment two or more outcomes are both admissible—the moment the spec becomes a *relation* rather than a function—somebody has to choose. And that choice burns the rest.
+
+---
+
+## What Makes Coordination Hard
+
+If coordination is just "make a commitment," why is it so expensive in practice?
+
+Because commitments have consequences that cascade.
+
+Gray's wedding metaphor stops at one couple. But real systems run a whole wedding season—and who can propose in round two depends on who got married in round one. That sequential dependency is the essential hardness.
+
+Consider two transactions, $T_1$ and $T_2$, locked in a conflict cycle—each writes something the other needs. The system has to pick one: if $T_1$ commits, $T_2$ must abort, and vice versa. That's the first vow.
+
+Now add $T_3$, which reads what $T_1$ wrote. If $T_1$ committed, $T_3$ can proceed—its reads are valid. If $T_1$ aborted, the reads that $T_3$ depended on are gone and it must abort too. The second commitment ($T_3$: commit or abort?) can't be made until the first one ($T_1$ vs. $T_2$) has landed. Not because the decision is computationally hard—it's trivial once you know the outcome of round one. But you have to *know* the outcome of round one.
+
+Each commitment narrows the space of admissible outcomes. Some commitments are independent—you can make them in any order, or even simultaneously, and the result is the same. But others have *forced dependencies*: commitment B is only safe to make after commitment A has landed, because A's outcome determines which B's are valid.
+
+When commitments are independent, you can batch them into a single parallel round. When they're dependent, you have to sequence them. The minimum number of sequential rounds is the irreducible cost of coordination for that specification.
+
+This is why two-phase commit has two phases, not one. It's why consensus protocols need multiple rounds. It's why serializable transaction processing has latency proportional to contention. The sequencing isn't an implementation artifact—it's forced by the dependency structure of the commitments the spec requires.
+
+---
+
+## The View from Histories
+
+I want to flag something about the framing above, because it's the thing that's been unlocking results for me recently.
+
+Everything I've said so far is stated in terms of *histories* (partially ordered sets of events—what has happened so far) and *admissible outcomes* (what the spec allows at each history). No programming language (sorry Datalog, TLA+, P, etc!) No failure model. No protocol structure. No special hardware. Just: what outcomes does the spec allow, and how do they evolve as events accumulate?
+
+That abstraction is what makes the definition powerful. Most frameworks for reasoning about coordination are tuned for one kind of question. Protocol design frameworks (Paxos, Raft, 2PC) tell you *how* to coordinate but not *whether* you need to. Programming-language analyses like CALM tell you whether a *program* needs coordination, but they can't naturally express impossibility results—you can't write "linearizable register" in Datalog and ask whether it's monotonic. And impossibility results (FLP, CAP) tell you what *can't* be done, but they're stated in specific system models and don't connect back to the programming question.
+
+The histories-and-outcomes framing covers all of these with a single lens. It's abstract enough to express impossibility theorems and concrete enough to guide implementation choices:
+
+- *Transaction isolation levels* differ in which futures they burn and when. Serializability burns aggressively (total order on all transactions). Read committed burns conservatively (only individual reads are committed). The gap between them is a gap in commitment structure. That's a result that connects protocol designs to formal isolation levels.
+
+- *CAP-style tradeoffs* arise because some commitments can't be made safely when the network partitions. If you can't hear from everyone, you can't be sure your commitment won't conflict with someone else's. Availability means making commitments anyway; consistency means waiting until you can make them safely. That's an impossibility result.
+
+- *Consensus impossibility* (FLP) says that in an asynchronous system with even one possible failure, you can't guarantee that a commitment will ever be made. The commitment itself is trivial—pick a value. The impossibility is about ensuring that everyone agrees on *which* commitment was made, in the face of uncertainty about who's still alive. That's another impossibility result—in a completely different system model than CAP, yet the same underlying phenomenon.
+
+- *Three-phase commit* is a cautionary tale. 3PC tried to avoid 2PC's blocking problem by adding an extra phase—but the underlying specification still requires a commitment that can't be made safely without hearing from everyone. Splitting the ceremony into more phases doesn't change the vows. 3PC was doomed because it tried to avoid paying a coordination cost that the spec demands. That's an impossibility result the practitioners could have used in advance!
+
+- *CALM* says that monotonic programs—programs whose conclusions are never retracted by new information—don't need coordination. In our language: if the admissible outcomes only grow (or stay the same) as events accumulate, there are no futures to burn. The world does the sculpting for you. That's a programming-language result.
+
+Protocol design, impossibility theorems, isolation hierarchies, programming-language analyses—all instances of the same question: what commitments does the spec require, and what are their dependencies? The fact that a single framing can express results that previously lived in separate literatures is, I think, a sign that we're looking at the right abstraction.
+
+---
+
+## Two Open Questions
+
+This framing raises two questions that I think are worth dedicated posts.
+
+The first: **when is coordination intrinsically required by a specification?** Not "when does your implementation use coordination"—implementations can be wasteful. The question is whether the spec *itself* demands it. Is there a test you can apply to a specification, before writing any code, that tells you whether coordination is avoidable? CALM gave one answer for monotonic programs. But CALM was tied to a specific programming-language lens. Can we do better—can we test the *spec* directly, independent of any language or model?
+
+The second: **when coordination is required, how much do you need?** If your spec demands three sequential rounds of commitment, can you get away with two? Is there a meaningful notion of "commitment complexity" that measures the irreducible sequential cost—and is it related to the complexity measures we already know?
+
+I have written down my thoughts on both. But they're for upcoming posts.
+
+For now, the takeaway is this: coordination is commitment. Commitment burns futures. And the structure of those commitments—which ones depend on which, which can happen in parallel, which must be sequenced—is the skeleton that determines how much coordination costs.
+
+The skeleton is an intrinsic property of the specification, not a side-effect of an implementation. That's what makes it worth studying.
