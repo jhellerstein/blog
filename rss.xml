@@ -1,4 +1,146 @@
-<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Async Stream RSS Feed]]></title><description><![CDATA[Async Stream RSS Feed]]></description><link>https://jhellerstein.github.io/blog</link><generator>GatsbyJS</generator><lastBuildDate>Tue, 24 Mar 2026 06:15:52 GMT</lastBuildDate><item><title><![CDATA[What Is Coordination, Really?]]></title><description><![CDATA[In an earlier post I argued that coordination is about ruling out futures that the world hasn't ruled out on its own. Waiting, ordering…]]></description><link>https://jhellerstein.github.io/blog/cost-of-committing/</link><guid isPermaLink="false">https://jhellerstein.github.io/blog/cost-of-committing/</guid><pubDate>Tue, 24 Mar 2026 00:00:00 GMT</pubDate><content:encoded>
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Async Stream RSS Feed]]></title><description><![CDATA[Async Stream RSS Feed]]></description><link>https://jhellerstein.github.io/blog</link><generator>GatsbyJS</generator><lastBuildDate>Tue, 07 Apr 2026 15:15:02 GMT</lastBuildDate><item><title><![CDATA[Playing for Complications—and Why Systems Shouldn't]]></title><description><![CDATA[In the last post I argued that coordination is commitment—a vow to avoid futures with undesirable outcomes. I also raised a question: when…]]></description><link>https://jhellerstein.github.io/blog/two-commitments/</link><guid isPermaLink="false">https://jhellerstein.github.io/blog/two-commitments/</guid><pubDate>Tue, 07 Apr 2026 00:00:00 GMT</pubDate><content:encoded>
+import Callout from &apos;../../../src/components/Callout&apos;
+
+In the [last post](../cost-of-committing/) I argued that coordination is commitment—a vow to avoid futures with undesirable outcomes. 
+
+I also raised a question: when coordination is required, how much do you need?
+
+Let&apos;s start counting. 
+
+My interest in this topic started in distributed systems and databases, but in this post I want to look at commitments through a lens that everybody can understand: games. 
+
+In competitive games there&apos;s a well-known strategy called *playing for complications*: deliberately steering the game so your opponent faces more hard choices. It turns out this idea has a precise connection to commitment counts. But as we&apos;ll see, the lesson for systems isn&apos;t about your opponent&apos;s complications. It&apos;s about your own.
+
+---
+
+## Tic-Tac-Toe as a Commitment Problem
+
+Consider tic-tac-toe from 𝗫&apos;s perspective. The board starts empty. The game&apos;s *specification* — the set of admissible outcomes — is the set of all reachable final board configurations from that point in history. 𝗫&apos;s job is to extend history to narrow that set, move by move, until only winning configurations remain — or at least, no losing ones.
+
+Each move 𝗫 makes is a commitment in history. Placing an 𝗫 in the center square permanently eliminates every future board configuration in which the center is empty or occupied by 𝗢. That&apos;s irrevocable. You can&apos;t un-play a move.
+
+𝗢&apos;s moves are environment events in history: they further narrow the set of reachable configurations, but 𝗫 doesn&apos;t control them. 𝗫 commits; the environment responds; 𝗫 commits again.
+
+The game is a sequence of alternating commitment and environment events. And the commitments are *sequential*: each move depends on what the board looks like after the previous moves (both 𝗫&apos;s and 𝗢&apos;s). You can&apos;t play your third move before you&apos;ve seen the response to your second. The sequential dependencies are forced by the structure of the game.
+
+So tic-tac-toe has a move depth of (at most) 5 — that&apos;s the maximum number of 𝗫 moves in a game. But not all of these moves are genuine commitments. As we&apos;ll see, some are forced — and a forced move doesn&apos;t narrow the admissible outcomes at all. The *commitment* depth may be lower.
+
+---
+
+## Not All Moves Are Created Equal
+
+Let&apos;s dig in, because this is where it gets interesting. Not every 𝗫 move is equally &quot;committal.&quot;
+
+In some board positions, 𝗫 has only one good move; the rest all lead to losses. That&apos;s not really a choice. 𝗫 is forced. It&apos;s not formally a commitment: there&apos;s only one admissible option, so no outcomes are being excluded, no futures are being ruled out. If the game were on a computer, it would &quot;auto-move&quot; for you at that stage, since no decision is available.
+
+We noted [last time](../cost-of-committing/) that you don&apos;t need a wedding when there&apos;s only one eligible match, and you don&apos;t need a commitment when there&apos;s only one viable move.
+
+In other positions, 𝗫 has multiple moves that are all equally optimal: they all guarantee at least a draw against perfect play. *That&apos;s* where the real commitment happens. 𝗫 must choose among several futures that are all fine, and the choice permanently excludes the others. The commitment burns futures that were genuinely viable.
+
+The *interesting* depth of a game isn&apos;t the total number of moves. It&apos;s the number of moves where the player actually has to make a non-trivial choice — where multiple options are equally good and the player must commit to one.
+
+---
+
+## The Fallible Opponent
+
+Against a perfect opponent, it doesn&apos;t matter which of the equally-good moves you pick. They all lead to the same outcome (a draw, in tic-tac-toe). So the &quot;real&quot; commitment depth — the number of non-trivial choices — is irrelevant against perfection.
+
+But opponents aren&apos;t perfect. This is where commitment depth starts to get really interesting, and where we arrive at the idea of *playing for complications*.
+
+If your opponent makes mistakes with some probability, then you should keep them playing! Prefer lines of play that force them to make *more* non-trivial choices. Each choice they face is an opportunity to blunder. The more genuine commitments your opponent has to make, the more chances they have to pick wrong. This is playing for complications: steering the game toward positions rich in genuine commitments (i.e. opportunities for error) for your opponent.
+
+Think about it from 𝗫&apos;s perspective. In tic-tac-toe, every opening move is game-theoretically optimal — they all guarantee a draw against a perfect opponent. But the commitment structures they produce for 𝗢 are very different. A corner opening leaves 𝗢 with an average of 1.8 genuine commitments across the game. An edge opening pushes that to 3.2 — nearly every one of 𝗢&apos;s four moves is a real choice.
+
+Against a perfect 𝗢, it doesn&apos;t matter. Against a fallible 𝗢, the edge opening is better — assuming 𝗫 plays perfectly. It creates more opportunities for 𝗢 to mess up. Each non-trivial choice 𝗢 faces is a coin flip that might land in your favor.
+
+But what if 𝗫 is also fallible? Then maximizing 𝗢&apos;s commitments isn&apos;t enough — you also have to worry about 𝗫&apos;s own commitment depth. An opening that forces 𝗢 into 4 commitments but also puts 𝗫 through 4 is no better than one with 2 each. What matters is the *ratio*: 𝗢&apos;s commitments relative to 𝗫&apos;s.
+
+&lt;Callout type=&quot;info&quot;&gt;
+Against a fallible opponent, prefer strategies that maximize the ratio of your opponent&apos;s genuine commitments to your own. Each commitment is a chance to blunder, and you want that chance landing on the other side of the board.
+&lt;/Callout&gt;
+
+&lt;details&gt;
+&lt;summary&gt;Aside: the tic-tac-toe receipts&lt;/summary&gt;
+
+This is worth pausing on, because it reveals a tension.
+
+In game theory, the edge opening for tic-tac-toe is conventionally considered the &quot;weakest&quot; — and in a sense it is, because it gives 𝗢 the most room to maneuver. But that room is exactly what creates commitment depth. 𝗢 has more equally-good options, which means more genuine decisions, which means more chances to pick wrong.
+
+The corner opening is &quot;strongest&quot; in the sense that it constrains 𝗢 the most — but that constraint means 𝗢&apos;s moves are mostly forced, and forced moves aren&apos;t commitments. 𝗢 can play on autopilot.
+
+Here are the numbers, computed by exhaustive minimax over the full game tree ([source](https://gist.github.com/jhellerstein/07b31202b597defaa5faf29e3dccc357)):
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;&lt;th style={{textAlign: &apos;left&apos;}}&gt;𝗫 opening&lt;/th&gt;&lt;th style={{textAlign: &apos;right&apos;}}&gt;𝗢 commits (avg)&lt;/th&gt;&lt;th style={{textAlign: &apos;right&apos;}}&gt;𝗫 commits (avg)&lt;/th&gt;&lt;th style={{textAlign: &apos;right&apos;}}&gt;𝗢/𝗫 ratio&lt;/th&gt;&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;&lt;td style={{textAlign: &apos;left&apos;}}&gt;Corner&lt;/td&gt;&lt;td style={{textAlign: &apos;right&apos;}}&gt;1.8&lt;/td&gt;&lt;td style={{textAlign: &apos;right&apos;}}&gt;2.1&lt;/td&gt;&lt;td style={{textAlign: &apos;right&apos;}}&gt;0.84&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td style={{textAlign: &apos;left&apos;}}&gt;Center&lt;/td&gt;&lt;td style={{textAlign: &apos;right&apos;}}&gt;1.9&lt;/td&gt;&lt;td style={{textAlign: &apos;right&apos;}}&gt;2.5&lt;/td&gt;&lt;td style={{textAlign: &apos;right&apos;}}&gt;0.76&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td style={{textAlign: &apos;left&apos;}}&gt;Edge&lt;/td&gt;&lt;td style={{textAlign: &apos;right&apos;}}&gt;3.2&lt;/td&gt;&lt;td style={{textAlign: &apos;right&apos;}}&gt;2.7&lt;/td&gt;&lt;td style={{textAlign: &apos;right&apos;}}&gt;1.17&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+(𝗫&apos;s commitment count excludes the opening commitment (move) — that&apos;s the independent variable we&apos;re conditioning on, not a future decision to be counted.)
+
+The ratio is the key column. Corner and center both have ratios below 1: 𝗫 commits more than 𝗢, which means 𝗫&apos;s own blunders outweigh 𝗢&apos;s. Only the edge opening pushes the ratio above 1 — 𝗢 commits more than 𝗫, so errors net out in 𝗫&apos;s favor.
+
+A simulation with equal error rates for both players confirms this. At each genuine commitment, a player blunders with probability ε (choosing uniformly at random among all legal moves). At forced moves, both play correctly:
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;&lt;th style={{textAlign: &apos;left&apos;}}&gt;Opening&lt;/th&gt;&lt;th style={{textAlign: &apos;right&apos;}}&gt;ε = 0.05&lt;/th&gt;&lt;th style={{textAlign: &apos;right&apos;}}&gt;ε = 0.10&lt;/th&gt;&lt;th style={{textAlign: &apos;right&apos;}}&gt;ε = 0.20&lt;/th&gt;&lt;th style={{textAlign: &apos;right&apos;}}&gt;ε = 0.50&lt;/th&gt;&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;&lt;td style={{textAlign: &apos;left&apos;}}&gt;Corner&lt;/td&gt;&lt;td style={{textAlign: &apos;right&apos;}}&gt;+0.008&lt;/td&gt;&lt;td style={{textAlign: &apos;right&apos;}}&gt;+0.016&lt;/td&gt;&lt;td style={{textAlign: &apos;right&apos;}}&gt;+0.031&lt;/td&gt;&lt;td style={{textAlign: &apos;right&apos;}}&gt;+0.074&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td style={{textAlign: &apos;left&apos;}}&gt;Center&lt;/td&gt;&lt;td style={{textAlign: &apos;right&apos;}}&gt;+0.025&lt;/td&gt;&lt;td style={{textAlign: &apos;right&apos;}}&gt;+0.050&lt;/td&gt;&lt;td style={{textAlign: &apos;right&apos;}}&gt;+0.093&lt;/td&gt;&lt;td style={{textAlign: &apos;right&apos;}}&gt;+0.186&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td style={{textAlign: &apos;left&apos;}}&gt;Edge&lt;/td&gt;&lt;td style={{textAlign: &apos;right&apos;}}&gt;+0.028&lt;/td&gt;&lt;td style={{textAlign: &apos;right&apos;}}&gt;+0.054&lt;/td&gt;&lt;td style={{textAlign: &apos;right&apos;}}&gt;+0.095&lt;/td&gt;&lt;td style={{textAlign: &apos;right&apos;}}&gt;+0.163&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+(Values are 𝗫&apos;s net advantage: 𝗫 win rate minus 𝗢 win rate. All positive because 𝗫 moves first.)
+
+Center and edge produce similar net advantages — both much better than corner. This tracks with the ratio: corner&apos;s ratio (0.84) is closest to 1 but still below it, and the simulation confirms it&apos;s the worst opening against a fallible opponent. Edge has the best ratio (1.17) and performs well in simulation, though center is comparable — its lower total commitment count means fewer blunder opportunities for either side, which partially compensates for its worse ratio.
+
+So &quot;optimal strategy&quot; and &quot;playing for complications&quot; pull in opposite directions, and the right balance depends on how fallible the players are. Neither axis alone gives the whole picture.
+
+A caveat: in tic-tac-toe, &quot;error&quot; is binary — a move is either optimal or it isn&apos;t, and a suboptimal move against a perfect opponent always costs the game. In a richer game (chess, Go, or a distributed system), errors come in degrees. A move might not lose outright but might shrink your margin, or increase the number of commitments you need later. The right measure of &quot;error&quot; in those settings isn&apos;t binary but something like expected value lost per commitment — what chess engines approximate as [centipawn loss](https://www.chess.com/blog/raync910/average-centipawn-loss-chess-acpl). The commitment-depth framework still applies, but the analysis of fallibility gets more nuanced.
+
+&lt;/details&gt;
+
+This is a different axis than the one game theory usually emphasizes. Classical game theory cares about the *value* of a position — can you win, lose, or draw? Commitment depth cares about the *structure* of the path to that value — how many real choices does each player face along the way? Two positions might have the same game-theoretic value but very different commitment structures, and against imperfect opponents, that difference matters.
+
+---
+
+## From Games to Systems
+
+This isn&apos;t all just fun and games. The same structure shows up in computer systems, which is where I started this series. But the emphasis shifts.
+
+Playing for complications is about the opponent&apos;s side of the board — maximizing *their* genuine commitments. That&apos;s a fine strategy in a game. But in a distributed system, the system is the player, and the environment (requests, delays, failures) is the opponent. The environment&apos;s moves are difficult to control. What you *can* influence is your own commitment depth. And commitments are expensive.
+A commitment in a distributed system is a coordination step: a consensus round, a serialization decision, an irrevocable ordering between tasks. Each one costs latency, and if it turns out wrong — if a task aborts — you pay again retrying it. 
+
+So the lesson from the ratio analysis carries over directly: what matters for systems is minimizing your own commitment depth. The environment will do what it does. Your job is to keep your side of the board simple.
+
+The main lever is *scheduling*. When the system has a choice about which tasks to run, it should favor tasks that don&apos;t conflict with each other. Conflicting tasks force sequential commitments — you have to order them, and ordering is coordination. Non-conflicting tasks can commit independently, in parallel, with no coordination between them. The commitment depth drops.
+
+This is why the monotone case from [earlier posts](../crdt-intro/) is so appealing: if all operations commute, nothing conflicts, and the commitment depth is zero. No coordination needed, ever. That&apos;s the ideal. Most real systems can&apos;t achieve it everywhere, but they can push toward it — by designing schemas, APIs, and task structures that minimize conflicts, and by scheduling to keep conflicting tasks apart. There&apos;s good systems work to be done there.
+
+---
+
+## Counting Commitments
+
+What I find theoretically appealing about this view is that it gives us something to *count*.
+
+Classical complexity theory counts computational steps — how long does it take to produce an answer? But many problems aren&apos;t about computing an answer. They&apos;re about *choosing* one admissible outcome from many. The cost isn&apos;t computation; it&apos;s commitment.
+
+Games make this vivid. The computational cost of tic-tac-toe is trivial — any move can be evaluated in constant time. But the commitment structure isn&apos;t trivial at all. The number of genuine sequential choices, the dependency between them, the way one player&apos;s choices shape the other&apos;s — that&apos;s a real structure with real consequences, and it&apos;s invisible to classical complexity measures.
+
+The same is true in databases and distributed systems. The computational cost of textbook protocols is typically minimal. The commitment cost — how many irrevocable choices must be sequenced — is what determines the inherent latency of the spec. And that cost is a property of the specification, not the implementation.
+
+Are there specifications that require three sequential commitments? Ten? A hundred?  Is there a meaningful hierarchy, and can we characterize it?
+
+I think so. But that&apos;s for another post.
+</content:encoded></item><item><title><![CDATA[What Is Coordination, Really?]]></title><description><![CDATA[In an earlier post I argued that coordination is about ruling out futures that the world hasn't ruled out on its own. Waiting, ordering…]]></description><link>https://jhellerstein.github.io/blog/cost-of-committing/</link><guid isPermaLink="false">https://jhellerstein.github.io/blog/cost-of-committing/</guid><pubDate>Tue, 24 Mar 2026 00:00:00 GMT</pubDate><content:encoded>
 import Callout from &apos;../../../src/components/Callout&apos;
 
 In an [earlier post](../three-specs-on-specs/) I argued that coordination is about ruling out futures that the world hasn&apos;t ruled out on its own. Waiting, ordering, and commitment all converge on that idea.
@@ -660,31 +802,6 @@ Choosing AWS was strategic. I’m excited to be part of an organization that lea
 I’m still maintaining a role as Professor of the Graduate School at Berkeley, enabling me to continue steering the open Hydro research agenda and co-advising students alongside brilliant colleagues like [Natacha Crooks](https://nacrooks.github.io/) and [Max Willsey](https://www.mwillsey.com/).
 
 While I generally [keep CALM](https://cacm.acm.org/research/keeping-calm/), I’m fired up to pursue this moment at AWS.
-</content:encoded></item><item><title><![CDATA[Tips on Research]]></title><description><![CDATA[As a complement to my last post, I thought I'd write a follow-up with some constructive advice. No point complaining about negativity if you…]]></description><link>https://jhellerstein.github.io/blog/research-tips/</link><guid isPermaLink="false">https://jhellerstein.github.io/blog/research-tips/</guid><pubDate>Fri, 27 Jun 2025 00:00:00 GMT</pubDate><content:encoded>
-As a complement to my last post, I thought I&apos;d write a follow-up with some constructive advice. 
-No point complaining about negativity if you don&apos;t offer some positive alternatives!
-
-# Five Tips for Doing Your Best Research
-
-Rather than opine about research topics, which are always changing, I thought I&apos;d offer advice on research processes. No doubt a lot of this is conventional wisdom, but I came to these conclusions based on my own career experience. Maybe some of this will be useful to those of you who are earlier on in your journey. Your mileage may vary.
-
-
-1. **Follow Your Muse, but Evaluate Humbly**. Pursue topics that fascinate you; the best work comes from enthusiasm. But also build in mechanisms that force you to be clear-headed about assessing the impact of your work over time. Evaluate on a timescale that suits your career and work (5-year windows align well with PhD student lifecycles), and humbly move on from topics where the impact isn&apos;t what you wanted. Time spent in industry—especially entrepreneurship—is helpful in learning this discipline; the market is an efficient (heartless!) teacher of lessons in adaptability and humility, as anyone whose startup has &quot;pivoted&quot; will share. Changing course can be scary, but sometimes it sets you free to shine again.
-
-2. **Explore and Exploit**: After my first few years in research, I started deliberately trying to invest my research time in a portfolio of a few &quot;long plays&quot; (in my case, applying declarative/dataflow programming to a variety of other domains) and a larger number of shorter but diverse excursions. Reinforcement learning folks might call this &quot;explore vs. exploit&quot;, and clearly one should do some of both. Connecting back to the previous point, it&apos;s the long plays that benefit the most from deliberate reflection; the short ones have agility built in.
-
-3. **Pick Topics that Leverage Your Working Style**: Pick topic areas that favor a research style that fits your personality. For example, working on AI-related topics right now demands that you produce a lot of quick-fire results in a tightly competitive arena. That requires an restless competitive streak: reading a ton, being quick to change, and doing research in relatively short bites on very popular topics. By contrast, meaningful systems work requires an investment of many years of engineering and teamwork, during which there will be fallow periods of publication. In that space, you need patience, good taste and self-confidence, because you don&apos;t get to change your mind nearly as often. There&apos;s no right answer here—you might enjoy a mixture, and one style is not inherently better than another. But it&apos;s good to make sure that your personal working style matches your topic selection. In your early days, finding role models in the literature can help—again, one role model may be quite different from another, so choose what appeals to you and reassess over time.
-
-4. **Collaborate with Complementary Experts**. It&apos;s good intellectual nutrition to collaborate with experts in a variety of other fields. A lot of the best research opportunities are at the seams between traditional fields, and it&apos;s more educational and fun to work with people who know and think about things different than your experience.
-For faculty, I suggest spending ~5 years co-advising Ph.D. students with people in another field, whether that&apos;s across or outside CS. Then consider trying a new collaboration in a different field thereafter. 
-Doing this will broaden your horizons, and teach you more about your own strengths: the ones that come from your education in your home field, and the ones that come from your personal research style and talents.
-
-5. **For Topic Selection, Do Your (Qualitative) Research**. This is maybe the least common advice in this list. To choose important problems—especially in user-facing areas—consider learning how to do qualitative research methods like interview studies, to figure out empirically what problems will have impact. I&apos;ve been involved in doing this twice (once for [Enterprise Data Analytics](http://vis.stanford.edu/files/2012-EnterpriseAnalysisInterviews-VAST.pdf), and more recently for [Machine Learning Engineering](https://dl.acm.org/doi/abs/10.1145/3653697)). In both cases, the interview studies led to interesting and highly relevant follow-on constructive work, and the papers describing the studies and results were themselves well received: both won awards. Be aware: this is a lot of work to do well! (To be clear, in the cases above that work was not done by me—it was done by amazing students like [Sean Kandel](https://en.wikipedia.org/wiki/Sean_Kandel), [Rolando Garcia](https://rlnsanz.github.io/) and [Shreya Shankar](https://www.sh-reya.com/)).  Note that versions of this approach are now standard practice for entrepreneurs, and that&apos;s an area where we can learn from industry practices as well as social scientists. See the book [The Mom Test](https://www.momtestbook.com/) for a distilled discussion.
-
-# Caveat
-I&apos;ll close with a standard warning I give when people ask me for advice on starting companies. Most entrepreneurs wildly overfit their advice to their own narrow experience. Some folks who dish out advice are more self-aware about that than others. The overfitting is more extreme in the startup world than academia, but the theme remains. 
-
-So... take my advice for what it&apos;s worth (hint: this blog is free!) and go ask a lot of other people for theirs too.
 </content:encoded></item><item><title><![CDATA[An Optimist's Reflection on SIGMOD]]></title><description><![CDATA[I write this note on my way home from the annual ACM SIGMOD conference, one of the top venues for data management research. In this post I…]]></description><link>https://jhellerstein.github.io/blog/sigmod-optimism/</link><guid isPermaLink="false">https://jhellerstein.github.io/blog/sigmod-optimism/</guid><pubDate>Fri, 27 Jun 2025 00:00:00 GMT</pubDate><content:encoded>I write this note on my way home from the annual [ACM SIGMOD](https://2025.sigmod.org) conference,
 one of the top venues for data management research. In this post I want to reflect on
 one of the best-attended sessions, a [panel discussion](https://arxiv.org/abs/2504.08948v1) 
@@ -760,6 +877,31 @@ Spread some sunshine to the junior folks. To rattle off one more cliche: Lead, F
 
 In the spirit of being constructive, in my next post I&apos;ll share some actionable ideas that I&apos;ve 
 found useful for choosing impactful and personally rewarding research.
+</content:encoded></item><item><title><![CDATA[Tips on Research]]></title><description><![CDATA[As a complement to my last post, I thought I'd write a follow-up with some constructive advice. No point complaining about negativity if you…]]></description><link>https://jhellerstein.github.io/blog/research-tips/</link><guid isPermaLink="false">https://jhellerstein.github.io/blog/research-tips/</guid><pubDate>Fri, 27 Jun 2025 00:00:00 GMT</pubDate><content:encoded>
+As a complement to my last post, I thought I&apos;d write a follow-up with some constructive advice. 
+No point complaining about negativity if you don&apos;t offer some positive alternatives!
+
+# Five Tips for Doing Your Best Research
+
+Rather than opine about research topics, which are always changing, I thought I&apos;d offer advice on research processes. No doubt a lot of this is conventional wisdom, but I came to these conclusions based on my own career experience. Maybe some of this will be useful to those of you who are earlier on in your journey. Your mileage may vary.
+
+
+1. **Follow Your Muse, but Evaluate Humbly**. Pursue topics that fascinate you; the best work comes from enthusiasm. But also build in mechanisms that force you to be clear-headed about assessing the impact of your work over time. Evaluate on a timescale that suits your career and work (5-year windows align well with PhD student lifecycles), and humbly move on from topics where the impact isn&apos;t what you wanted. Time spent in industry—especially entrepreneurship—is helpful in learning this discipline; the market is an efficient (heartless!) teacher of lessons in adaptability and humility, as anyone whose startup has &quot;pivoted&quot; will share. Changing course can be scary, but sometimes it sets you free to shine again.
+
+2. **Explore and Exploit**: After my first few years in research, I started deliberately trying to invest my research time in a portfolio of a few &quot;long plays&quot; (in my case, applying declarative/dataflow programming to a variety of other domains) and a larger number of shorter but diverse excursions. Reinforcement learning folks might call this &quot;explore vs. exploit&quot;, and clearly one should do some of both. Connecting back to the previous point, it&apos;s the long plays that benefit the most from deliberate reflection; the short ones have agility built in.
+
+3. **Pick Topics that Leverage Your Working Style**: Pick topic areas that favor a research style that fits your personality. For example, working on AI-related topics right now demands that you produce a lot of quick-fire results in a tightly competitive arena. That requires an restless competitive streak: reading a ton, being quick to change, and doing research in relatively short bites on very popular topics. By contrast, meaningful systems work requires an investment of many years of engineering and teamwork, during which there will be fallow periods of publication. In that space, you need patience, good taste and self-confidence, because you don&apos;t get to change your mind nearly as often. There&apos;s no right answer here—you might enjoy a mixture, and one style is not inherently better than another. But it&apos;s good to make sure that your personal working style matches your topic selection. In your early days, finding role models in the literature can help—again, one role model may be quite different from another, so choose what appeals to you and reassess over time.
+
+4. **Collaborate with Complementary Experts**. It&apos;s good intellectual nutrition to collaborate with experts in a variety of other fields. A lot of the best research opportunities are at the seams between traditional fields, and it&apos;s more educational and fun to work with people who know and think about things different than your experience.
+For faculty, I suggest spending ~5 years co-advising Ph.D. students with people in another field, whether that&apos;s across or outside CS. Then consider trying a new collaboration in a different field thereafter. 
+Doing this will broaden your horizons, and teach you more about your own strengths: the ones that come from your education in your home field, and the ones that come from your personal research style and talents.
+
+5. **For Topic Selection, Do Your (Qualitative) Research**. This is maybe the least common advice in this list. To choose important problems—especially in user-facing areas—consider learning how to do qualitative research methods like interview studies, to figure out empirically what problems will have impact. I&apos;ve been involved in doing this twice (once for [Enterprise Data Analytics](http://vis.stanford.edu/files/2012-EnterpriseAnalysisInterviews-VAST.pdf), and more recently for [Machine Learning Engineering](https://dl.acm.org/doi/abs/10.1145/3653697)). In both cases, the interview studies led to interesting and highly relevant follow-on constructive work, and the papers describing the studies and results were themselves well received: both won awards. Be aware: this is a lot of work to do well! (To be clear, in the cases above that work was not done by me—it was done by amazing students like [Sean Kandel](https://en.wikipedia.org/wiki/Sean_Kandel), [Rolando Garcia](https://rlnsanz.github.io/) and [Shreya Shankar](https://www.sh-reya.com/)).  Note that versions of this approach are now standard practice for entrepreneurs, and that&apos;s an area where we can learn from industry practices as well as social scientists. See the book [The Mom Test](https://www.momtestbook.com/) for a distilled discussion.
+
+# Caveat
+I&apos;ll close with a standard warning I give when people ask me for advice on starting companies. Most entrepreneurs wildly overfit their advice to their own narrow experience. Some folks who dish out advice are more self-aware about that than others. The overfitting is more extreme in the startup world than academia, but the theme remains. 
+
+So... take my advice for what it&apos;s worth (hint: this blog is free!) and go ask a lot of other people for theirs too.
 </content:encoded></item><item><title><![CDATA[CRDTs #4: Convergence, Determinism, Lower Bounds and Inflation]]></title><description><![CDATA[The CRDT literature sometimes leaves room for mathematical ambiguity. Maybe because the bulk of the work tends to be targeted at systems…]]></description><link>https://jhellerstein.github.io/blog/crdt-inflationary/</link><guid isPermaLink="false">https://jhellerstein.github.io/blog/crdt-inflationary/</guid><pubDate>Thu, 29 May 2025 00:00:00 GMT</pubDate><content:encoded>import Callout from &apos;../../../src/components/Callout&apos;
 import { withPrefix } from &quot;gatsby&quot;
 
