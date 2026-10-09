@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 440" width="720" height="440" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+  <!-- Ceiling title above room -->
+  <text x="360" y="26" text-anchor="middle" font-size="14" font-weight="600" fill="#222">
+    Ceiling: formal proof the program meets its spec
+  </text>
+
+  <!-- Top boundary (ceiling line) -->
+  <line x1="60" y1="42" x2="660" y2="42" stroke="#555" stroke-width="2.5" />
+
+  <!-- Room interior wash -->
+  <rect x="60" y="42" width="600" height="320" fill="#fdfdfd" stroke="none" />
+
+  <!-- Sieve annotation (bugs to be added by hand) -->
+  <text x="200" y="62" text-anchor="middle" font-size="12" fill="#555" font-style="italic">
+    Sieve region: testing (model checkers, fuzzers, PBT)
+  </text>
+
+  <!-- Floor layers (CbC) on the LEFT -->
+  <g>
+    <rect x="60" y="335" width="340" height="27" fill="#D7F0DD" stroke="#6a9a76" stroke-width="1" />
+    <text x="230" y="353" text-anchor="middle" font-size="13" fill="#222">Types</text>
+
+    <rect x="60" y="308" width="340" height="27" fill="#F7DEE5" stroke="#b86b7b" stroke-width="1" />
+    <text x="230" y="326" text-anchor="middle" font-size="13" fill="#222">Memory Safety</text>
+
+    <rect x="60" y="281" width="340" height="27" fill="#DCE6F2" stroke="#5a7598" stroke-width="1" />
+    <text x="230" y="299" text-anchor="middle" font-size="13" fill="#222">Distributed Safety</text>
+  </g>
+
+  <!-- CbC label just above the top layer -->
+  <text x="230" y="270" text-anchor="middle" font-size="12" fill="#444" font-style="italic">
+    Correct-by-construction (floor rises)
+  </text>
+
+  <!-- Wall (CbV) on the RIGHT, semi-transparent so it overlaps visibly -->
+  <rect x="360" y="42" width="300" height="320" fill="#FFE2BF" fill-opacity="0.55"
+        stroke="#b47a32" stroke-width="1.5" stroke-opacity="0.75" />
+  <text x="510" y="195" text-anchor="middle" font-size="15" font-weight="600" fill="#222">Verification</text>
+  <text x="510" y="214" text-anchor="middle" font-size="12" fill="#444" font-style="italic">Correct-by-verification</text>
+  <text x="510" y="229" text-anchor="middle" font-size="12" fill="#444" font-style="italic">(wall closes in)</text>
+
+  <!-- Bottom boundary (floor line) -->
+  <line x1="60" y1="362" x2="660" y2="362" stroke="#555" stroke-width="2.5" />
+
+  <!-- Floor title below room -->
+  <text x="360" y="384" text-anchor="middle" font-size="14" font-weight="600" fill="#222">
+    Floor: assembly code
+  </text>
+
+  <!-- x-axis labels at bottom -->
+  <text x="60" y="420" font-size="13" font-style="italic" fill="#333">
+    ← Universal properties
+  </text>
+  <text x="660" y="420" text-anchor="end" font-size="13" font-style="italic" fill="#333">
+    Arbitrary properties →
+  </text>
+</svg>
