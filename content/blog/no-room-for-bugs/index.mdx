@@ -1,127 +1,116 @@
 ---
 title: "No Room for Bugs"
-date: 2026-04-14
+date: 2026-10-13
 tags: ["distributed-systems", "correctness", "verification", "hydro"]
+coverImage: ./bugroom.png
 ---
 
 import { withPrefix } from "gatsby"
 
-With the rise of AI coding agents, many of my friends who are software engineers or systems researchers have become interested in methods for proving program correctness. I just attended a panel at the High Performance Transaction Systems workshop, where database experts were feeling their way through this. The space can appear forbidding, as much of it started in academia, and leans on daunting terminology from "formal methods" down to "model checking" and "property-based testing". How does all that relate to the day-to-day experience of writing code and tests? This post is an attempt to sketch out the space for the rest of us.
+Worried about AI slop in the code you're dealing with? Wondering how AI agents can help you move faster without leaving a nest of bugs behind? Concerned about the future of software reliability? Me too.
 
-Think of your software as a room full of bugs. Our goal is to construct techniques that shrink the interior of this room, eventually to nothing.
+I always knew of some tools that could help check correctness of my code, but until recently I didn't have a good understanding of the state of the art. I suspect I'm not alone: the landscape of software-correctness tools can feel amorphous and forbidding. Commercial offerings often indulge in vague promises, while open-source tools tilt toward highly academic terminology, from "formal methods" down to "model checking" and "property-based testing". How does all that relate to the day-to-day experience of evaluating code—human-generated or otherwise? This post is my attempt to lay out the space for the rest of us.
+
+---
+
+> Think of your software as a room full of bugs. Our goal is to construct techniques that shrink the interior of this room as much as possible.
 
 The floor of this room is assembly code—whatever the compiler emits onto bare metal. The ceiling is a formal proof that the program meets its specification, machine-verified from the top down. Everything between the floor and the ceiling is where bugs live.
 
-Properties organize the room horizontally. On the left are *universal* properties—type safety, memory safety, absence of races—things no program should violate. On the right are *arbitrary* properties—the particular behaviors your application is supposed to exhibit (often called "business logic", an incredibly boring and limited phrase). The left side is "no program should do X." The right side is "my program should do Y."
+The bugs in this room come in two kinds. Bugs regarding **universal properties** violate rules that every program should follow—type safety, memory safety, avoiding data races, etc. Bugs that break **arbitrary properties** violate the rules that are specific to your program—things like "every voter can only vote once" or "the game physics must observe Newton's laws". (Folks sometimes call this "business logic", which always felt limited to me; software is not only for business!)
 
-To shrink the room, the field pursues two complementary strategies, and it's helpful to consider combining them.
+To shrink the room, the field pursues two complementary strategies:
 
-**Correct by construction** raises the floor on the left. The language refuses to compile programs that could violate a universal property, so the property holds for every program the compiler accepts. Classical type systems raise the floor by forbidding misapplication of code to inappropriate classes of data. Rust raises the floor against memory bugs. [Hydro](https://hydro.run) raises it against [Heisenbugs](https://en.wikipedia.org/wiki/Heisenbug) in distributed programs. Every universal correctness property we migrate into the compiler is another layer on top of the floor on the left, pushing it a bit higher.
 
-**Correct by verification** pushes a wall in from the right. For arbitrary properties about your specific program, you write proofs. [Verus](https://verus-lang.github.io/verus/) and [Stainless](https://stainless.epfl.ch) let you annotate real code with specifications and "discharge the obligations" (i.e. prove what needs to be proved) with an SMT solver. Where they succeed, floor meets ceiling for the stretch of code they cover—bugs are eradicated in that part of the room. This is the beautiful, impossible dream of a research community that has been at it for more than half a century: prove an arbitrary program meets its full specification. The *impossibility-in-general* is a mathematical fact going back to Turing (ported to program properties in [Rice's Theorem](https://en.wikipedia.org/wiki/Rice%27s_theorem)), but the progress toward *useful-in-many-cases* has been real, and the wall is further in than you might expect. And LLMs are helping steer these formal tools to drive the wall a bit further.
-
-The two moves share a frontier in the middle. Memory safety is a universal property in Rust (correct by construction) but a bespoke "proof obligation" in C (correct by verification). That frontier has been drifting rightward for decades: a property that researchers first learned to prove by hand on specific programs eventually gets captured by someone's new type system, at which point every future program gets the property for free. Hydro's guarantees are a more recent example—verification work on specific distributed protocols preceded, and informed, Hydro's type system, which enforces universal properties like determinism of outcomes despite races and retries. The two correctness strategies aren't orthogonal; they're trading expressivity against proof burden along a frontier that keeps moving.
-
-Whatever is left over—the uncovered space lying above the raised left floor and unbounded by the inward right wall—we solve with some form of disciplined-but-incomplete testing. Techniques like model checkers and fuzzers pass a sieve through the gap, catching bugs that happen to land in the weave. The sieve keeps getting finer, but it is also fundamentally holey, and not in a divine way.
-
-<div className="diagram-float">
-  <img src={withPrefix("/img/no-room-for-bugs-diagram.svg")} alt="The room metaphor: raised floor on the left, wall closing in from the right, sieve region in between." style={{ width: "100%", display: "block" }} />
-  <div className="diagram-caption">
-    The room. Correct-by-construction raises the floor on the left; correct-by-verification pushes the wall in from the right; the sieve passes through what remains. The clean geometric overlap between CbC and CbV is a simplification—in practice some programs fall into gaps neither strategy covers, and others get covered by both unevenly.
+<div className="diagram-float" style={{ float: "none", width: "100%", maxWidth: "720px", margin: "1.5rem auto" }}>
+  <img src={withPrefix("/img/bugroom-diagram.png")} alt="The room metaphor: raised floor beneath every program, wall closing in from the side, screen region in between." style={{ width: "100%", display: "block" }} />
+  <div className="diagram-caption" style={{ fontSize: "0.8em" }}>
+    The room. Correct-by-construction raises the floor beneath every program; correct-by-verification pushes the wall in from the side, sealing specific stretches of code. The screen passes through what remains between floor and wall.
   </div>
 </div>
 
+**Correct by construction** raises the floor. The language refuses to compile programs that could violate a universal property, so the property holds for every program the compiler accepts. Classical type systems raise the floor by forbidding misapplication of code to inappropriate classes of data. Rust raises the floor against memory bugs. [Hydro](https://hydro.run) raises it against [Heisenbugs](https://en.wikipedia.org/wiki/Heisenbug) in distributed programs. Every universal correctness property we migrate into the compiler is another layer on top of the floor, pushing it a bit higher.
+
+**Correct by verification** pushes a wall in from the side. For arbitrary properties about your specific program, you write proofs. [Verus](https://verus-lang.github.io/verus/) and [Stainless](https://stainless.epfl.ch) let you annotate real code with specifications and "discharge the obligations" (i.e. prove what needs to be proved) with an SMT solver. Where they succeed, floor meets ceiling for the stretch of code they cover—bugs are eradicated in that part of the room. This is the beautiful, impossible dream of a research community that has been at it for more than half a century: prove an arbitrary program meets its full specification. The *impossibility-in-general* is a mathematical fact going back to Turing, but the progress toward *useful-in-many-cases* has been real, and the wall is further in than you might expect. And LLMs are helping steer these formal tools to drive the wall a bit further.
+
+The two moves aren't fully distinct. Distributed safety is a [universal property in Hydro](https://hydro.run/docs/hydro/reference/correctness/) (correct by construction) but a bespoke "proof obligation" in plain Rust (correct by verification). The boundary between the two has been shifting toward "universal" for decades: a property that researchers first learned to prove by hand on specific programs eventually gets captured by someone's new type system, at which point every future program gets the property for free. So the two correctness strategies aren't technically orthogonal, but the general framing is useful.
+
+Whatever is left over—the uncovered space above the raised floor and within the inward wall—we solve with some form of disciplined-but-incomplete testing. Techniques like model checkers and fuzzers pass a screen through the gap, catching bugs that happen to land in the weave. The screen keeps getting finer, but it is also fundamentally holey, and not in a divine way.
+
 ---
 
-## Raising the floor on the left
+## Raising the floor
 
-The floor on the left has not been bare assembly for a very long time. We've been layering on top of it for decades.
+The floor has not been bare assembly for a very long time. We've been layering on top of it for decades.
 
 The first serious layer is **types**. A type system refuses programs that mix integers with strings, dereference nulls that the compiler can't locate, or reference fields that do not exist. The errors it rules out are not minor—they are, historically, among the most common things people got wrong. Once a language insists on static types, those bugs stop being possible to write.
 
-The second is **memory safety**. Rust's borrow checker guarantees, at compile time, that programs don't dangle pointers, double-free, or race over shared memory in the primitive C/C++ sense. Microsoft [reported in 2019](https://www.microsoft.com/en-us/msrc/blog/2019/07/a-proactive-approach-to-more-secure-code) that about 70% of their security CVEs fell in the memory-safety bucket; Rust takes that whole bucket off the table. (Not for free: you spend time arguing with the borrow checker instead of debugging segfaults. But many of us happily make that trade, especially now that LLMs can help us satisfy the compiler.)
+The second is **memory safety**. Rust's borrow checker guarantees, at compile time, that programs don't dangle pointers, double-free, or race over shared memory in the primitive C/C++ sense. Microsoft [reported in 2019](https://www.microsoft.com/en-us/msrc/blog/2019/07/a-proactive-approach-to-more-secure-code) that about 70% of their security CVEs fell in the memory-safety bucket; Rust takes that whole bucket off the table. (Not for free: you spend time arguing with the borrow checker instead of debugging segfaults. But many of us happily make that trade, especially now that LLMs do a lot of the arguing with the borrow checker for us.)
 
-The third, and the one my team spends most of its time on, is **distributed safety**. This is what [Hydro](https://hydro.run) is after. Distributed programs misbehave because they make silent assumptions about message ordering, delivery, retries, failures. Hydro refuses to compile programs that use those assumptions without declaring them. Collections carry their ordering and retry guarantees in their types. The few places where the program's behavior genuinely depends on the environment are tagged with a `nondet!` keyword; everything else is deterministic by construction. I [wrote about this](../codegen-reality/) earlier this year in the context of AI-generated code. The point here is the same, viewed from the floor: an entire category of distributed Heisenbugs—e.g., races induced by false assumptions about possible execution orders—can be made un-expressible, in the same spirit that Rust made use-after-free un-expressible.
+The third, and the one my team spends most of its time on, is **distributed safety**. This is what [Hydro](https://hydro.run) is after. Distributed programs misbehave because they make silent assumptions about message ordering, delivery, retries, failures. Hydro refuses to compile programs that use those assumptions without declaring them. Collections carry their ordering and retry guarantees in their types. The few places where the program's behavior genuinely depends on the environment are tagged with a `nondet!` keyword; everything else is deterministic by construction. Hydro makes an entire category of distributed Heisenbugs un-expressible—e.g., races induced by false assumptions about possible execution orders—in the same spirit that Rust made use-after-free un-expressible.
 
-Each of these layers is laid down by the language designer. They ensure programmers will never see a class of bugs. If the code compiles, the bugs that would live below the floor are not in the room. The programmer's budget—and the testing budget—gets spent on what's left.
-
----
-
-## Pushing the wall in from the right
-
-Universal properties aren't everything you want to prove. Most of what makes a program *correct* is specific to that program: a particular invariant on a particular data structure, a particular protocol between a particular set of services, a particular numerical property of a particular algorithm. No language can bake those into its type system without becoming the application itself.
-
-For those, we push a wall in from the right. [Verus](https://verus-lang.github.io/verus/) lets you annotate Rust code with specifications and have an SMT solver discharge the proof obligations. [Stainless](https://stainless.epfl.ch) does the same for Scala. When they succeed, the stretch of code they cover is sealed: floor meets ceiling outright, and no bug can appear in that program's part of the room. 
-
-The cost is the usual cost of real verification: writing specifications, discharging proof obligations, waiting on the solver. Walls can only move so fast (modern solvers can resort to NP-complete algorithms); the general problem is undecidable as shown by Rice, and not every program is practical to verify at the current state of the art. But verification often does work, and every piece of code that lands "behind the right wall" is a piece the sieve doesn't have to cover, and the testing budget doesn't have to pay for.
+Each of these layers is laid down by the language designer. They ensure programmers will never see a class of bugs. If the code compiles, the bugs that would live below the floor are not in the room. The programmer's budget—and the testing budget—can be spent on what's left.
 
 ---
 
-## Fancy Tests: Sieving the middle
+## Pushing the wall in from the side
 
-For whatever is still in the room, we throw a sieve at it. There are different kinds of these sieves: model checking, fuzzing, property-based testing. All pick an invariant, pick a search strategy in "the room", and try to find a trace that violates it. Anything caught in the sieve is a bug we found before production did.
+Universal properties aren't everything you want to prove. Most program correctness is application-specific: perhaps a data structure must preserve an invariant, services need to follow a protocol, or an algorithm has some numerical property to maintain. No language can bake those into its type system without becoming the application itself.
 
-The sieves have gotten remarkably good. [TLA+](https://lamport.azurewebsites.net/tla/tla.html) and [P](https://p-org.github.io/P/) have been the model checkers of record for protocol work, although they have issues I'll point out in a moment. [Jepsen](https://jepsen.io) is a merciless fault-injection harness aimed at (distributed) databases. [Antithesis](https://antithesis.com), [Shuttle](https://github.com/awslabs/shuttle), [Turmoil](https://github.com/tokio-rs/turmoil), and [HydroSim](https://hydro.run/docs/hydro/reference/simulation/) are simulation testers that take control of the scheduler, the clock, and the network so they can replay rare interleavings deterministically. Each of these tightens the weave in its own patch of the room.
+For those, we push a wall in from the side. One family of tools lets you annotate your real code with assertions about what it should do, and the verifier mechanically proves the code satisfies them — the build fails if it can't. [Verus](https://verus-lang.github.io/verus/) and [Prusti](https://github.com/viperproject/prusti-dev) do this for Rust; [Dafny](https://dafny.org/) is a long-running project in this family; [Stainless](https://stainless.epfl.ch) does it for Scala. When they succeed, the stretch of code they cover is sealed: floor meets ceiling outright, and no bug can appear in that program's part of the room.
 
-Despite the formal-sounding name, **model checkers** are just brute-force testing machines that exhaustively look for bugs in a finite slice of your program's state space. You bound the parameters—say, five nodes, ten in-flight messages, two possible values per register—and the checker enumerates every reachable state within that bound to see if any violates your invariant. Within the bound, nothing escapes. The holes are everything outside the bound: the six-node case, the eleventh message, the value you didn't model. State explosion forces the bound small; small bounds leave big holes.
+A second family of verification tools asks you to write a *separate* specification in a dedicated language and checks the spec on its own terms, with no mechanical tie to the deployed code. We'll come back to that family in a moment; the "no mechanical tie" caveat is where its trouble lives.
 
-**Fuzzers and property-based testers** come at it from the other direction: generate inputs or schedules at random, run the system, see what breaks. Classical fuzzers watch for the obvious failures—crashes, hangs, assertion violations, etc. Property-based testers ([QuickCheck](https://hackage.haskell.org/package/QuickCheck), [Hypothesis](https://hypothesis.works/), [proptest](https://proptest-rs.github.io/proptest/)) let you declare an invariant that should hold on every generated input, which catches wrong-answer bugs that don't crash. Coverage-directed fuzzers (like [AFL](https://lcamtuf.coredump.cx/afl/) and its descendants) go further: they instrument the binary to see which code paths each input exercises, and preferentially mutate inputs that reach new ones. That turns fuzzing from blind sampling into something closer to guided search. The holes are the paths the generator never stumbles onto in a reasonable time budget: deep branches gated on improbable inputs, race conditions that need a very particular interleaving, and bugs the oracle doesn't recognize as bugs.
-
-The mesh in these sieves has been getting finer over time, but it's still holey. And because the gap between floor and ceiling is far wider than any one pass can cover, bugs lurk between the holes.
-
-I'm a big fan of simulation testing and fuzzing. But I'm not a fan of many of the most popular tools in the area, including some of the most famous ones like TLA+.
+The cost is the usual cost of real verification: writing the actual specifications, discharging proof obligations, waiting on the solver. Walls can only move so fast (modern solvers sometimes resort to exponential algorithms); the general problem is undecidable as shown by [Rice's Theorem](https://en.wikipedia.org/wiki/Rice%27s_theorem), and not every program is practical to verify at the current state of the art. But verification often does work, and every piece of code that lands "behind the wall" is a piece the screen doesn't have to cover, and the testing budget doesn't have to pay for.
 
 ---
 
-## Sieves and Ceilings in the wrong room
+## Fancy Tests: Screening the middle
+
+For whatever is still in the room, we throw a screen at it. There are different kinds of these screens: model checking, fuzzing, property-based testing. All pick an invariant, pick a search strategy in "the room", and try to find a trace that violates it. Anything caught in the screen is a bug we found before production did.
+
+The screens have gotten remarkably good. [TLA+](https://lamport.azurewebsites.net/tla/tla.html) and [P](https://p-org.github.io/P/) have been the model checkers of record for protocol work, although they have issues I'll point out in a moment. [Jepsen](https://jepsen.io) pummels distributed databases with faults and then checks whether the resulting histories still satisfy application-level consistency invariants like linearizability and isolation. [Shuttle](https://github.com/awslabs/shuttle), [Turmoil](https://github.com/tokio-rs/turmoil), and [HydroSim](https://hydro.run/docs/hydro/reference/simulation/) are simulation testers that hook into your actual code's scheduler, network, and clock, so unlucky interleavings can be replayed deterministically. [Antithesis](https://antithesis.com) generalizes the idea further: it runs your entire system as a black box in a deterministic hypervisor, giving the same replay guarantees without requiring language-level hooks. Each of these tightens the weave in its own patch of the room.
+
+Despite the formal-sounding name, **model checkers** are just brute-force testing machines that exhaustively look for bugs in a finite slice of your program's state space. You bound the parameters—say, five nodes, ten in-flight messages, two possible values per register—and the checker enumerates every reachable state within that bound to see if any violates your invariant. Within the bound, nothing escapes. The holes are everything outside the bound: the six-node case, the eleventh message, the value you didn't model. State explosion forces the bound to be small, though, and the smaller the bounds the bigger the holes.
+
+**Fuzzers and property-based testers** come at it from the other direction: generate inputs or schedules at random, run the system, see what breaks. Classical fuzzers watch for the obvious failures—crashes, hangs, assertion violations, etc. Property-based testers ([QuickCheck](https://hackage.haskell.org/package/QuickCheck), [Hypothesis](https://hypothesis.works/), [proptest](https://proptest-rs.github.io/proptest/)) let you declare an invariant that should hold on every generated input, which catches wrong-answer bugs that don't crash. Coverage-directed fuzzers (like [AFL](https://lcamtuf.coredump.cx/afl/) and its descendants, including HydroSim in fuzzing mode) go further: they instrument the binary to see which code paths each input exercises, and preferentially mutate inputs that reach new ones. That turns fuzzing from blind sampling into something closer to guided search. The holes are the paths the generator never stumbles onto in a reasonable time budget: deep branches gated on improbable inputs, race conditions that need a very particular interleaving, and bugs the oracle doesn't recognize as bugs.
+
+The mesh in these screens has been getting finer over time, but it's still holey. And because the gap between floor and ceiling is far wider than any one pass can cover, bugs lurk between the holes.
+
+I'm a big fan of simulation testing and fuzzing. But I have issues with many of the most popular tools in the area, including some of the most famous ones like TLA+.
+
+---
+
+## Screens and Ceilings in the wrong room
 
 If your program is a room full of sneaky little bugs, there's little to be gained by looking for them in a neighboring room!
 
-In tools like TLA+ or P, the model is a spec written in a specification language, while the deployed system is written in Go, Rust, or Java. In formal verification tools like [Lean](https://lean-lang.org/) or [Coq](https://coq.inria.fr/), you prove an algorithm correct in beautiful dependent types; what ships to production might be a C++ port written by someone who read the paper. The checking is being done on a careful, idealized model of the code. The real system is a different program.
+I recently had an engineer describe an off-by-one error that showed up in some tricky Java code for database recovery. They asked me if they should have written a spec for the recovery protocol in P—would they have caught the error? My answer: absolutely not! The odds that the P spec would faithfully capture every operational detail of the Java implementation would be near zero.
 
-And it gets worse, because specs drift. A protocol grows a retry path that didn't exist in the model. An engineer tightens a timeout to meet an SLA. The code picks up a feature the TLA+ spec never heard about. Every one of those changes opens a seam between the spec and the code. The model checker keeps happily reporting no violations in the spec, which is true. The system the spec describes stopped existing six months ago.
+In model checkers like TLA+, P, or [Alloy](https://alloytools.org/), the model is a spec written in a dedicated specification language, while the deployed system is written in a full programming language like Go, Rust, or Java. In interactive proof assistants like [Lean](https://lean-lang.org/), [Rocq](https://rocq-prover.org/) (formerly Coq), or [Isabelle](https://isabelle.in.tum.de/), you prove an algorithm correct by hand; what ships to production might be a C++ port written by someone who read the paper. In both cases the checking is being done on a careful, idealized spec of the system. The real system is a different artifact, and nothing in the tool enforces that the two agree.
 
-This is not a theoretical worry. It's the dominant failure mode of formal methods in industry. Not that the proofs are wrong—the proofs are proofs about a different program.
+Over time the gap gets worse, because implementations drift. The implementation might gain a retry path that wasn't in the model; later, someone tightens a timeout to meet an SLA or adds a feature the TLA+ spec never heard about. Every one of those changes opens a seam between the spec and the code. The model checker keeps happily reporting no violations in the spec, which is true. The system the spec describes stopped existing six months ago.
+
+This is a practical failure mode, not just a theoretical caveat. A proof can remain valid while the production code evolves away from the program it describes.
+
+(The drift problem is specific to tools that check a *separate* model. The simulation testers mentioned earlier — Shuttle, Turmoil, HydroSim, and Antithesis — all work on your actual deployed system and don't have this problem.)
 
 ---
 
 ## Testing the real room
 
-The fix is to make the deployed code be the thing the sieve passes through.
+The fix is to make the deployed code be the thing the screen passes through.
 
-That is the bet in Hydro. The program is written in Rust, with Hydro's extensions. The very same code is what runs in production and what HydroSim—Hydro's built-in model checker—explores. The sieve doesn't walk a translation of the code; it walks the code.
+That is the bet in Hydro. The program is written in Rust, with Hydro's extensions. The very same code is what runs in production and what HydroSim—Hydro's built-in model checker—explores. The screen doesn't walk a translation of the code; it walks the code.
 
-The invariants are unit tests. You already write those! HydroSim upgrades a standard unit test from "does this pass in one scheduling?" to "does this pass under every scheduling, every delivery order, every message loss the Hydro type system said was legal?", up to some bound of model checking. Because the type system has already pushed the left-side floor up, every path not marked `nondet!` is deterministic by construction—there is nothing in those paths left to search. The sieve spends its entire budget on the few places where the program genuinely has to confront non-determinism.
+The invariants are unit tests. You already write those! HydroSim upgrades a standard unit test from "does this pass in one scheduling?" to "does this pass under every scheduling, every delivery order, every message loss the Hydro type system said was legal?", up to some bound of model checking. Because the type system has already pushed the floor up, every path not marked `nondet!` is deterministic by construction—there is nothing in those paths left to search. The screen spends its entire budget on the few places where the program genuinely has to confront non-determinism.
 
-Three things to remember about Hydro's approach to testing:
+If the code changes, the thing being sampled changes with it. There is no model drifting away from the production system, because there is no separate model. The screen is being passed through the room you actually ship.
 
-> 1. The code is the spec. 
-> 2. Unit tests are the invariants.
-> 3. Correct-by-construction shrinks the state space that HydroSim needs to test.
-
-If the code changes, the thing being sampled changes with it. There is no model drifting away from the production system, because there is no separate model. The sieve is being passed through the room you actually ship.
-
----
-
-## Where the Heisenbugs go
-
-The hardest bugs we hunt are the ones that depend on the environment's randomness. 
-The random setup (message order, retry pattern, transient failure) that exercises the bug might be a 1-in-a-million occurrence, which makes it awfully hard to reproduce, yet typical to see in production at scale. These are Heisenbugs, and they're not pretty.
-
-Heisenbugs live in exactly the place a type system can't normally reach: the interaction between the program and an environment—like a network—that doesn't take instructions from the compiler.
-
-Distributed safety is Hydro's answer. Every source of non-determinism that can perturb the program's behavior has to be acknowledged in the type system. If the program's output depends on message ordering, that is either guaranteed as commutative by the type system (and therefore deterministic), or wrapped in `nondet!` (and therefore visible). There is no silent dependence on the environment's mood. The simulator then takes those `nondet!` points and systematically explores the environment's choices on each of them: every schedule, every delivery pattern, every failure the environment is permitted to produce, up to the practical bounds of model-checking. Outside the `nondet!` blocks, the program is eventually deterministic—it will converge to the same answer no matter what the network did. Inside, every answer the environment can elicit is on the table during testing.
-
-The same insight shows up in the simulation-tester family. Shuttle, Turmoil, and Antithesis all work by seizing control of the runtime's sources of randomness so they can replay unlucky orderings on demand. They are powerful, and I'm glad they exist. Hydro's twist is to push that control up into the language, so the compiler can tell you precisely which program locations the simulator must exercise. The simulator doesn't have to speculate about where non-determinism might live; the type system wrote it down.
-
-Jepsen works the other end entirely, pummeling a running system from the outside with partitions, clock skew, and custom values in database rows that witness transaction errors. Verifiers like Verus and Stainless push walls in from the right. Hydro's type system raises the floor on the left. No one right tool, just a stack that is getting more capable.
+This approach is especially well-suited to the hardest category of bugs: the [heisenbugs](https://en.wikipedia.org/wiki/Heisenbug) that depend on uncontrolled environment randomness. The comparison with runtime-level simulators like Shuttle, Turmoil, and Antithesis is substantial enough to deserve its own post, which is [up next](../exterminating-heisenbugs/).
 
 ---
 
 ## Where the room is heading
 
-The point of the picture isn't that any one move closes the room. It is that we have three moves now, and they compose.
-
-Correct-by-construction raises the floor on the left by ensuring increasingly rich universal properties. Correct-by-verification pushes the wall in from the right: more code gets proven, more arbitrary properties become impossible. The sieve passes through what's left in the middle—and earns its keep as long as it's in the right room. That is why the "code is the spec" move matters so much. Every new layer the compiler takes on raises the floor beneath the sieve. Every wall the verifier can push in is a patch where the sieve doesn't have to pray that its mesh is fine enough.
-
-A complete solution here will probably have to await a major shift in popular programming paradigms, which is the subject of a future post. Meanwhile, the room will remain and the sieve will keep having holes. But the floor is higher than it has ever been, the wall is further in than it has ever been, and increasingly there's a sieve you can pass through the room you actually live in.
+A complete solution to removing bugs will probably have to await a major shift in popular programming paradigms, which is the subject of a future post. Meanwhile, we have three complementary moves to make in our bug room. Most tools fit neatly into one of the three categories, so mixing and matching is needed. Hydro is an example that integrates across multiple categories: it raises the floor with new types, and offers a screen—HydroSim—designed to fit perfectly with that floor. We're also contemplating Hydro-Verus integrations that bring in the wall on the right as well. More on that as it emerges!
