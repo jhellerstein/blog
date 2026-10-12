@@ -1,4 +1,113 @@
-<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Async Stream RSS Feed]]></title><description><![CDATA[Async Stream RSS Feed]]></description><link>https://jhellerstein.github.io/blog</link><generator>GatsbyJS</generator><lastBuildDate>Tue, 07 Apr 2026 15:30:30 GMT</lastBuildDate><item><title><![CDATA[Playing for Complications—and Why Systems Shouldn't]]></title><description><![CDATA[In the last post I argued that coordination is commitment—a vow to avoid futures with undesirable outcomes. I also raised a question: when…]]></description><link>https://jhellerstein.github.io/blog/two-commitments/</link><guid isPermaLink="false">https://jhellerstein.github.io/blog/two-commitments/</guid><pubDate>Tue, 07 Apr 2026 00:00:00 GMT</pubDate><content:encoded>
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Async Stream RSS Feed]]></title><description><![CDATA[Async Stream RSS Feed]]></description><link>https://jhellerstein.github.io/blog</link><generator>GatsbyJS</generator><lastBuildDate>Mon, 12 Oct 2026 23:19:49 GMT</lastBuildDate><item><title><![CDATA[No Room for Bugs]]></title><description><![CDATA[Worried about AI slop in the code you're dealing with? Wondering how AI agents can help you move faster without leaving a nest of bugs…]]></description><link>https://jhellerstein.github.io/blog/no-room-for-bugs/</link><guid isPermaLink="false">https://jhellerstein.github.io/blog/no-room-for-bugs/</guid><pubDate>Tue, 13 Oct 2026 00:00:00 GMT</pubDate><content:encoded>
+import { withPrefix } from &quot;gatsby&quot;
+
+Worried about AI slop in the code you&apos;re dealing with? Wondering how AI agents can help you move faster without leaving a nest of bugs behind? Concerned about the future of software reliability? Me too.
+
+I always knew of some tools that could help check correctness of my code, but until recently I didn&apos;t have a good understanding of the state of the art. I suspect I&apos;m not alone: the landscape of software-correctness tools can feel amorphous and forbidding. Commercial offerings often indulge in vague promises, while open-source tools tilt toward highly academic terminology, from &quot;formal methods&quot; down to &quot;model checking&quot; and &quot;property-based testing&quot;. How does all that relate to the day-to-day experience of evaluating code—human-generated or otherwise? This post is my attempt to lay out the space for the rest of us.
+
+---
+
+&gt; Think of your software as a room full of bugs. Our goal is to construct techniques that shrink the interior of this room as much as possible.
+
+The floor of this room is assembly code—whatever the compiler emits onto bare metal. The ceiling is a formal proof that the program meets its specification, machine-verified from the top down. Everything between the floor and the ceiling is where bugs live.
+
+The bugs in this room come in two kinds. Bugs regarding **universal properties** violate rules that every program should follow—type safety, memory safety, avoiding data races, etc. Bugs that break **arbitrary properties** violate the rules that are specific to your program—things like &quot;every voter can only vote once&quot; or &quot;the game physics must observe Newton&apos;s laws&quot;. (Folks sometimes call this &quot;business logic&quot;, which always felt limited to me; software is not only for business!)
+
+To shrink the room, the field pursues two complementary strategies:
+
+
+&lt;div className=&quot;diagram-float&quot; style={{ float: &quot;none&quot;, width: &quot;100%&quot;, maxWidth: &quot;720px&quot;, margin: &quot;1.5rem auto&quot; }}&gt;
+  &lt;img src={withPrefix(&quot;/img/bugroom-diagram.png&quot;)} alt=&quot;The room metaphor: raised floor beneath every program, wall closing in from the side, screen region in between.&quot; style={{ width: &quot;100%&quot;, display: &quot;block&quot; }} /&gt;
+  &lt;div className=&quot;diagram-caption&quot; style={{ fontSize: &quot;0.8em&quot; }}&gt;
+    The room. Correct-by-construction raises the floor beneath every program; correct-by-verification pushes the wall in from the side, sealing specific stretches of code. The screen passes through what remains between floor and wall.
+  &lt;/div&gt;
+&lt;/div&gt;
+
+**Correct by construction** raises the floor. The language refuses to compile programs that could violate a universal property, so the property holds for every program the compiler accepts. Classical type systems raise the floor by forbidding misapplication of code to inappropriate classes of data. Rust raises the floor against memory bugs. [Hydro](https://hydro.run) raises it against [Heisenbugs](https://en.wikipedia.org/wiki/Heisenbug) in distributed programs. Every universal correctness property we migrate into the compiler is another layer on top of the floor, pushing it a bit higher.
+
+**Correct by verification** pushes a wall in from the side. For arbitrary properties about your specific program, you write proofs. [Verus](https://verus-lang.github.io/verus/) and [Stainless](https://stainless.epfl.ch) let you annotate real code with specifications and &quot;discharge the obligations&quot; (i.e. prove what needs to be proved) with an SMT solver. Where they succeed, floor meets ceiling for the stretch of code they cover—bugs are eradicated in that part of the room. This is the beautiful, impossible dream of a research community that has been at it for more than half a century: prove an arbitrary program meets its full specification. The *impossibility-in-general* is a mathematical fact going back to Turing, but the progress toward *useful-in-many-cases* has been real, and the wall is further in than you might expect. And LLMs are helping steer these formal tools to drive the wall a bit further.
+
+The two moves aren&apos;t fully distinct. Distributed safety is a [universal property in Hydro](https://hydro.run/docs/hydro/reference/correctness/) (correct by construction) but a bespoke &quot;proof obligation&quot; in plain Rust (correct by verification). The boundary between the two has been shifting toward &quot;universal&quot; for decades: a property that researchers first learned to prove by hand on specific programs eventually gets captured by someone&apos;s new type system, at which point every future program gets the property for free. So the two correctness strategies aren&apos;t technically orthogonal, but the general framing is useful.
+
+Whatever is left over—the uncovered space above the raised floor and within the inward wall—we solve with some form of disciplined-but-incomplete testing. Techniques like model checkers and fuzzers pass a screen through the gap, catching bugs that happen to land in the weave. The screen keeps getting finer, but it is also fundamentally holey, and not in a divine way.
+
+---
+
+## Raising the floor
+
+The floor has not been bare assembly for a very long time. We&apos;ve been layering on top of it for decades.
+
+The first serious layer is **types**. A type system refuses programs that mix integers with strings, dereference nulls that the compiler can&apos;t locate, or reference fields that do not exist. The errors it rules out are not minor—they are, historically, among the most common things people got wrong. Once a language insists on static types, those bugs stop being possible to write.
+
+The second is **memory safety**. Rust&apos;s borrow checker guarantees, at compile time, that programs don&apos;t dangle pointers, double-free, or race over shared memory in the primitive C/C++ sense. Microsoft [reported in 2019](https://www.microsoft.com/en-us/msrc/blog/2019/07/a-proactive-approach-to-more-secure-code) that about 70% of their security CVEs fell in the memory-safety bucket; Rust takes that whole bucket off the table. (Not for free: you spend time arguing with the borrow checker instead of debugging segfaults. But many of us happily make that trade, especially now that LLMs do a lot of the arguing with the borrow checker for us.)
+
+The third, and the one my team spends most of its time on, is **distributed safety**. This is what [Hydro](https://hydro.run) is after. Distributed programs misbehave because they make silent assumptions about message ordering, delivery, retries, failures. Hydro refuses to compile programs that use those assumptions without declaring them. Collections carry their ordering and retry guarantees in their types. The few places where the program&apos;s behavior genuinely depends on the environment are tagged with a `nondet!` keyword; everything else is deterministic by construction. Hydro makes an entire category of distributed Heisenbugs un-expressible—e.g., races induced by false assumptions about possible execution orders—in the same spirit that Rust made use-after-free un-expressible.
+
+Each of these layers is laid down by the language designer. They ensure programmers will never see a class of bugs. If the code compiles, the bugs that would live below the floor are not in the room. The programmer&apos;s budget—and the testing budget—can be spent on what&apos;s left.
+
+---
+
+## Pushing the wall in from the side
+
+Universal properties aren&apos;t everything you want to prove. Most program correctness is application-specific: perhaps a data structure must preserve an invariant, services need to follow a protocol, or an algorithm has some numerical property to maintain. No language can bake those into its type system without becoming the application itself.
+
+For those, we push a wall in from the side. One family of tools lets you annotate your real code with assertions about what it should do, and the verifier mechanically proves the code satisfies them — the build fails if it can&apos;t. [Verus](https://verus-lang.github.io/verus/) and [Prusti](https://github.com/viperproject/prusti-dev) do this for Rust; [Dafny](https://dafny.org/) is a long-running project in this family; [Stainless](https://stainless.epfl.ch) does it for Scala. When they succeed, the stretch of code they cover is sealed: floor meets ceiling outright, and no bug can appear in that program&apos;s part of the room.
+
+A second family of verification tools asks you to write a *separate* specification in a dedicated language and checks the spec on its own terms, with no mechanical tie to the deployed code. We&apos;ll come back to that family in a moment; the &quot;no mechanical tie&quot; caveat is where its trouble lives.
+
+The cost is the usual cost of real verification: writing the actual specifications, discharging proof obligations, waiting on the solver. Walls can only move so fast (modern solvers sometimes resort to exponential algorithms); the general problem is undecidable as shown by [Rice&apos;s Theorem](https://en.wikipedia.org/wiki/Rice%27s_theorem), and not every program is practical to verify at the current state of the art. But verification often does work, and every piece of code that lands &quot;behind the wall&quot; is a piece the screen doesn&apos;t have to cover, and the testing budget doesn&apos;t have to pay for.
+
+---
+
+## Fancy Tests: Screening the middle
+
+For whatever is still in the room, we throw a screen at it. There are different kinds of these screens: model checking, fuzzing, property-based testing. All pick an invariant, pick a search strategy in &quot;the room&quot;, and try to find a trace that violates it. Anything caught in the screen is a bug we found before production did.
+
+The screens have gotten remarkably good. [TLA+](https://lamport.azurewebsites.net/tla/tla.html) and [P](https://p-org.github.io/P/) have been the model checkers of record for protocol work, although they have issues I&apos;ll point out in a moment. [Jepsen](https://jepsen.io) pummels distributed databases with faults and then checks whether the resulting histories still satisfy application-level consistency invariants like linearizability and isolation. [Shuttle](https://github.com/awslabs/shuttle), [Turmoil](https://github.com/tokio-rs/turmoil), and [HydroSim](https://hydro.run/docs/hydro/reference/simulation/) are simulation testers that hook into your actual code&apos;s scheduler, network, and clock, so unlucky interleavings can be replayed deterministically. [Antithesis](https://antithesis.com) generalizes the idea further: it runs your entire system as a black box in a deterministic hypervisor, giving the same replay guarantees without requiring language-level hooks. Each of these tightens the weave in its own patch of the room.
+
+Despite the formal-sounding name, **model checkers** are just brute-force testing machines that exhaustively look for bugs in a finite slice of your program&apos;s state space. You bound the parameters—say, five nodes, ten in-flight messages, two possible values per register—and the checker enumerates every reachable state within that bound to see if any violates your invariant. Within the bound, nothing escapes. The holes are everything outside the bound: the six-node case, the eleventh message, the value you didn&apos;t model. State explosion forces the bound to be small, though, and the smaller the bounds the bigger the holes.
+
+**Fuzzers and property-based testers** come at it from the other direction: generate inputs or schedules at random, run the system, see what breaks. Classical fuzzers watch for the obvious failures—crashes, hangs, assertion violations, etc. Property-based testers ([QuickCheck](https://hackage.haskell.org/package/QuickCheck), [Hypothesis](https://hypothesis.works/), [proptest](https://proptest-rs.github.io/proptest/)) let you declare an invariant that should hold on every generated input, which catches wrong-answer bugs that don&apos;t crash. Coverage-directed fuzzers (like [AFL](https://lcamtuf.coredump.cx/afl/) and its descendants, including HydroSim in fuzzing mode) go further: they instrument the binary to see which code paths each input exercises, and preferentially mutate inputs that reach new ones. That turns fuzzing from blind sampling into something closer to guided search. The holes are the paths the generator never stumbles onto in a reasonable time budget: deep branches gated on improbable inputs, race conditions that need a very particular interleaving, and bugs the oracle doesn&apos;t recognize as bugs.
+
+The mesh in these screens has been getting finer over time, but it&apos;s still holey. And because the gap between floor and ceiling is far wider than any one pass can cover, bugs lurk between the holes.
+
+I&apos;m a big fan of simulation testing and fuzzing. But I have issues with many of the most popular tools in the area, including some of the most famous ones like TLA+.
+
+---
+
+## Screens and Ceilings in the wrong room
+
+If your program is a room full of sneaky little bugs, there&apos;s little to be gained by looking for them in a neighboring room!
+
+I recently had an engineer describe an off-by-one error that showed up in some tricky Java code for database recovery. They asked me if they should have written a spec for the recovery protocol in P—would they have caught the error? My answer: absolutely not! The odds that the P spec would faithfully capture every operational detail of the Java implementation would be near zero.
+
+In model checkers like TLA+, P, or [Alloy](https://alloytools.org/), the model is a spec written in a dedicated specification language, while the deployed system is written in a full programming language like Go, Rust, or Java. In interactive proof assistants like [Lean](https://lean-lang.org/), [Rocq](https://rocq-prover.org/) (formerly Coq), or [Isabelle](https://isabelle.in.tum.de/), you prove an algorithm correct by hand; what ships to production might be a C++ port written by someone who read the paper. In both cases the checking is being done on a careful, idealized spec of the system. The real system is a different artifact, and nothing in the tool enforces that the two agree.
+
+Over time the gap gets worse, because implementations drift. The implementation might gain a retry path that wasn&apos;t in the model; later, someone tightens a timeout to meet an SLA or adds a feature the TLA+ spec never heard about. Every one of those changes opens a seam between the spec and the code. The model checker keeps happily reporting no violations in the spec, which is true. The system the spec describes stopped existing six months ago.
+
+This is a practical failure mode, not just a theoretical caveat. A proof can remain valid while the production code evolves away from the program it describes.
+
+(The drift problem is specific to tools that check a *separate* model. The simulation testers mentioned earlier — Shuttle, Turmoil, HydroSim, and Antithesis — all work on your actual deployed system and don&apos;t have this problem.)
+
+---
+
+## Testing the real room
+
+The fix is to make the deployed code be the thing the screen passes through.
+
+That is the bet in Hydro. The program is written in Rust, with Hydro&apos;s extensions. The very same code is what runs in production and what HydroSim—Hydro&apos;s built-in model checker—explores. The screen doesn&apos;t walk a translation of the code; it walks the code.
+
+The invariants are unit tests. You already write those! HydroSim upgrades a standard unit test from &quot;does this pass in one scheduling?&quot; to &quot;does this pass under every scheduling, every delivery order, every message loss the Hydro type system said was legal?&quot;, up to some bound of model checking. Because the type system has already pushed the floor up, every path not marked `nondet!` is deterministic by construction—there is nothing in those paths left to search. The screen spends its entire budget on the few places where the program genuinely has to confront non-determinism.
+
+If the code changes, the thing being sampled changes with it. There is no model drifting away from the production system, because there is no separate model. The screen is being passed through the room you actually ship.
+
+This approach is especially well-suited to the hardest category of bugs: the [heisenbugs](https://en.wikipedia.org/wiki/Heisenbug) that depend on uncontrolled environment randomness. The comparison with runtime-level simulators like Shuttle, Turmoil, and Antithesis is substantial enough to deserve its own post, which is [up next](../exterminating-heisenbugs/).
+
+---
+
+## Where the room is heading
+
+A complete solution to removing bugs will probably have to await a major shift in popular programming paradigms, which is the subject of a future post. Meanwhile, we have three complementary moves to make in our bug room. Most tools fit neatly into one of the three categories, so mixing and matching is needed. Hydro is an example that integrates across multiple categories: it raises the floor with new types, and offers a screen—HydroSim—designed to fit perfectly with that floor. We&apos;re also contemplating Hydro-Verus integrations that bring in the wall on the right as well. More on that as it emerges!</content:encoded></item><item><title><![CDATA[Playing for Complications—and Why Systems Shouldn't]]></title><description><![CDATA[In the last post I argued that coordination is commitment—a vow to avoid futures with undesirable outcomes. I also raised a question: when…]]></description><link>https://jhellerstein.github.io/blog/two-commitments/</link><guid isPermaLink="false">https://jhellerstein.github.io/blog/two-commitments/</guid><pubDate>Tue, 07 Apr 2026 00:00:00 GMT</pubDate><content:encoded>
 import Callout from &apos;../../../src/components/Callout&apos;
 
 In the [last post](../cost-of-committing/) I argued that coordination is commitment—a vow to avoid futures with undesirable outcomes. 
@@ -802,31 +911,6 @@ Choosing AWS was strategic. I’m excited to be part of an organization that lea
 I’m still maintaining a role as Professor of the Graduate School at Berkeley, enabling me to continue steering the open Hydro research agenda and co-advising students alongside brilliant colleagues like [Natacha Crooks](https://nacrooks.github.io/) and [Max Willsey](https://www.mwillsey.com/).
 
 While I generally [keep CALM](https://cacm.acm.org/research/keeping-calm/), I’m fired up to pursue this moment at AWS.
-</content:encoded></item><item><title><![CDATA[Tips on Research]]></title><description><![CDATA[As a complement to my last post, I thought I'd write a follow-up with some constructive advice. No point complaining about negativity if you…]]></description><link>https://jhellerstein.github.io/blog/research-tips/</link><guid isPermaLink="false">https://jhellerstein.github.io/blog/research-tips/</guid><pubDate>Fri, 27 Jun 2025 00:00:00 GMT</pubDate><content:encoded>
-As a complement to my last post, I thought I&apos;d write a follow-up with some constructive advice. 
-No point complaining about negativity if you don&apos;t offer some positive alternatives!
-
-# Five Tips for Doing Your Best Research
-
-Rather than opine about research topics, which are always changing, I thought I&apos;d offer advice on research processes. No doubt a lot of this is conventional wisdom, but I came to these conclusions based on my own career experience. Maybe some of this will be useful to those of you who are earlier on in your journey. Your mileage may vary.
-
-
-1. **Follow Your Muse, but Evaluate Humbly**. Pursue topics that fascinate you; the best work comes from enthusiasm. But also build in mechanisms that force you to be clear-headed about assessing the impact of your work over time. Evaluate on a timescale that suits your career and work (5-year windows align well with PhD student lifecycles), and humbly move on from topics where the impact isn&apos;t what you wanted. Time spent in industry—especially entrepreneurship—is helpful in learning this discipline; the market is an efficient (heartless!) teacher of lessons in adaptability and humility, as anyone whose startup has &quot;pivoted&quot; will share. Changing course can be scary, but sometimes it sets you free to shine again.
-
-2. **Explore and Exploit**: After my first few years in research, I started deliberately trying to invest my research time in a portfolio of a few &quot;long plays&quot; (in my case, applying declarative/dataflow programming to a variety of other domains) and a larger number of shorter but diverse excursions. Reinforcement learning folks might call this &quot;explore vs. exploit&quot;, and clearly one should do some of both. Connecting back to the previous point, it&apos;s the long plays that benefit the most from deliberate reflection; the short ones have agility built in.
-
-3. **Pick Topics that Leverage Your Working Style**: Pick topic areas that favor a research style that fits your personality. For example, working on AI-related topics right now demands that you produce a lot of quick-fire results in a tightly competitive arena. That requires an restless competitive streak: reading a ton, being quick to change, and doing research in relatively short bites on very popular topics. By contrast, meaningful systems work requires an investment of many years of engineering and teamwork, during which there will be fallow periods of publication. In that space, you need patience, good taste and self-confidence, because you don&apos;t get to change your mind nearly as often. There&apos;s no right answer here—you might enjoy a mixture, and one style is not inherently better than another. But it&apos;s good to make sure that your personal working style matches your topic selection. In your early days, finding role models in the literature can help—again, one role model may be quite different from another, so choose what appeals to you and reassess over time.
-
-4. **Collaborate with Complementary Experts**. It&apos;s good intellectual nutrition to collaborate with experts in a variety of other fields. A lot of the best research opportunities are at the seams between traditional fields, and it&apos;s more educational and fun to work with people who know and think about things different than your experience.
-For faculty, I suggest spending ~5 years co-advising Ph.D. students with people in another field, whether that&apos;s across or outside CS. Then consider trying a new collaboration in a different field thereafter. 
-Doing this will broaden your horizons, and teach you more about your own strengths: the ones that come from your education in your home field, and the ones that come from your personal research style and talents.
-
-5. **For Topic Selection, Do Your (Qualitative) Research**. This is maybe the least common advice in this list. To choose important problems—especially in user-facing areas—consider learning how to do qualitative research methods like interview studies, to figure out empirically what problems will have impact. I&apos;ve been involved in doing this twice (once for [Enterprise Data Analytics](http://vis.stanford.edu/files/2012-EnterpriseAnalysisInterviews-VAST.pdf), and more recently for [Machine Learning Engineering](https://dl.acm.org/doi/abs/10.1145/3653697)). In both cases, the interview studies led to interesting and highly relevant follow-on constructive work, and the papers describing the studies and results were themselves well received: both won awards. Be aware: this is a lot of work to do well! (To be clear, in the cases above that work was not done by me—it was done by amazing students like [Sean Kandel](https://en.wikipedia.org/wiki/Sean_Kandel), [Rolando Garcia](https://rlnsanz.github.io/) and [Shreya Shankar](https://www.sh-reya.com/)).  Note that versions of this approach are now standard practice for entrepreneurs, and that&apos;s an area where we can learn from industry practices as well as social scientists. See the book [The Mom Test](https://www.momtestbook.com/) for a distilled discussion.
-
-# Caveat
-I&apos;ll close with a standard warning I give when people ask me for advice on starting companies. Most entrepreneurs wildly overfit their advice to their own narrow experience. Some folks who dish out advice are more self-aware about that than others. The overfitting is more extreme in the startup world than academia, but the theme remains. 
-
-So... take my advice for what it&apos;s worth (hint: this blog is free!) and go ask a lot of other people for theirs too.
 </content:encoded></item><item><title><![CDATA[An Optimist's Reflection on SIGMOD]]></title><description><![CDATA[I write this note on my way home from the annual ACM SIGMOD conference, one of the top venues for data management research. In this post I…]]></description><link>https://jhellerstein.github.io/blog/sigmod-optimism/</link><guid isPermaLink="false">https://jhellerstein.github.io/blog/sigmod-optimism/</guid><pubDate>Fri, 27 Jun 2025 00:00:00 GMT</pubDate><content:encoded>I write this note on my way home from the annual [ACM SIGMOD](https://2025.sigmod.org) conference,
 one of the top venues for data management research. In this post I want to reflect on
 one of the best-attended sessions, a [panel discussion](https://arxiv.org/abs/2504.08948v1) 
@@ -902,6 +986,31 @@ Spread some sunshine to the junior folks. To rattle off one more cliche: Lead, F
 
 In the spirit of being constructive, in my next post I&apos;ll share some actionable ideas that I&apos;ve 
 found useful for choosing impactful and personally rewarding research.
+</content:encoded></item><item><title><![CDATA[Tips on Research]]></title><description><![CDATA[As a complement to my last post, I thought I'd write a follow-up with some constructive advice. No point complaining about negativity if you…]]></description><link>https://jhellerstein.github.io/blog/research-tips/</link><guid isPermaLink="false">https://jhellerstein.github.io/blog/research-tips/</guid><pubDate>Fri, 27 Jun 2025 00:00:00 GMT</pubDate><content:encoded>
+As a complement to my last post, I thought I&apos;d write a follow-up with some constructive advice. 
+No point complaining about negativity if you don&apos;t offer some positive alternatives!
+
+# Five Tips for Doing Your Best Research
+
+Rather than opine about research topics, which are always changing, I thought I&apos;d offer advice on research processes. No doubt a lot of this is conventional wisdom, but I came to these conclusions based on my own career experience. Maybe some of this will be useful to those of you who are earlier on in your journey. Your mileage may vary.
+
+
+1. **Follow Your Muse, but Evaluate Humbly**. Pursue topics that fascinate you; the best work comes from enthusiasm. But also build in mechanisms that force you to be clear-headed about assessing the impact of your work over time. Evaluate on a timescale that suits your career and work (5-year windows align well with PhD student lifecycles), and humbly move on from topics where the impact isn&apos;t what you wanted. Time spent in industry—especially entrepreneurship—is helpful in learning this discipline; the market is an efficient (heartless!) teacher of lessons in adaptability and humility, as anyone whose startup has &quot;pivoted&quot; will share. Changing course can be scary, but sometimes it sets you free to shine again.
+
+2. **Explore and Exploit**: After my first few years in research, I started deliberately trying to invest my research time in a portfolio of a few &quot;long plays&quot; (in my case, applying declarative/dataflow programming to a variety of other domains) and a larger number of shorter but diverse excursions. Reinforcement learning folks might call this &quot;explore vs. exploit&quot;, and clearly one should do some of both. Connecting back to the previous point, it&apos;s the long plays that benefit the most from deliberate reflection; the short ones have agility built in.
+
+3. **Pick Topics that Leverage Your Working Style**: Pick topic areas that favor a research style that fits your personality. For example, working on AI-related topics right now demands that you produce a lot of quick-fire results in a tightly competitive arena. That requires an restless competitive streak: reading a ton, being quick to change, and doing research in relatively short bites on very popular topics. By contrast, meaningful systems work requires an investment of many years of engineering and teamwork, during which there will be fallow periods of publication. In that space, you need patience, good taste and self-confidence, because you don&apos;t get to change your mind nearly as often. There&apos;s no right answer here—you might enjoy a mixture, and one style is not inherently better than another. But it&apos;s good to make sure that your personal working style matches your topic selection. In your early days, finding role models in the literature can help—again, one role model may be quite different from another, so choose what appeals to you and reassess over time.
+
+4. **Collaborate with Complementary Experts**. It&apos;s good intellectual nutrition to collaborate with experts in a variety of other fields. A lot of the best research opportunities are at the seams between traditional fields, and it&apos;s more educational and fun to work with people who know and think about things different than your experience.
+For faculty, I suggest spending ~5 years co-advising Ph.D. students with people in another field, whether that&apos;s across or outside CS. Then consider trying a new collaboration in a different field thereafter. 
+Doing this will broaden your horizons, and teach you more about your own strengths: the ones that come from your education in your home field, and the ones that come from your personal research style and talents.
+
+5. **For Topic Selection, Do Your (Qualitative) Research**. This is maybe the least common advice in this list. To choose important problems—especially in user-facing areas—consider learning how to do qualitative research methods like interview studies, to figure out empirically what problems will have impact. I&apos;ve been involved in doing this twice (once for [Enterprise Data Analytics](http://vis.stanford.edu/files/2012-EnterpriseAnalysisInterviews-VAST.pdf), and more recently for [Machine Learning Engineering](https://dl.acm.org/doi/abs/10.1145/3653697)). In both cases, the interview studies led to interesting and highly relevant follow-on constructive work, and the papers describing the studies and results were themselves well received: both won awards. Be aware: this is a lot of work to do well! (To be clear, in the cases above that work was not done by me—it was done by amazing students like [Sean Kandel](https://en.wikipedia.org/wiki/Sean_Kandel), [Rolando Garcia](https://rlnsanz.github.io/) and [Shreya Shankar](https://www.sh-reya.com/)).  Note that versions of this approach are now standard practice for entrepreneurs, and that&apos;s an area where we can learn from industry practices as well as social scientists. See the book [The Mom Test](https://www.momtestbook.com/) for a distilled discussion.
+
+# Caveat
+I&apos;ll close with a standard warning I give when people ask me for advice on starting companies. Most entrepreneurs wildly overfit their advice to their own narrow experience. Some folks who dish out advice are more self-aware about that than others. The overfitting is more extreme in the startup world than academia, but the theme remains. 
+
+So... take my advice for what it&apos;s worth (hint: this blog is free!) and go ask a lot of other people for theirs too.
 </content:encoded></item><item><title><![CDATA[CRDTs #4: Convergence, Determinism, Lower Bounds and Inflation]]></title><description><![CDATA[The CRDT literature sometimes leaves room for mathematical ambiguity. Maybe because the bulk of the work tends to be targeted at systems…]]></description><link>https://jhellerstein.github.io/blog/crdt-inflationary/</link><guid isPermaLink="false">https://jhellerstein.github.io/blog/crdt-inflationary/</guid><pubDate>Thu, 29 May 2025 00:00:00 GMT</pubDate><content:encoded>import Callout from &apos;../../../src/components/Callout&apos;
 import { withPrefix } from &quot;gatsby&quot;
 
