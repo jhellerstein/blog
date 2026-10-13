@@ -210,12 +210,6 @@ pre[class*="language-"] code {
   width: 100%;
 }
 
-@media (max-width: 768px) {
-  .site-nav a {
-    font-size: 0.85rem;
-  }
-}
-
 /* =========================
    Hero Section
    ========================= */
@@ -444,9 +438,6 @@ social-links a:hover {
 .banner-hero {
   position: relative;
   width: 100%;
-  height: 120px;
-  min-height: 120px;
-  max-height: 120px;
   margin-bottom: 2rem;
   overflow: hidden;
   display: flex;
@@ -457,17 +448,16 @@ social-links a:hover {
 
 .banner-hero > a {
   display: block;
-  width: 2400px;
-  min-width: 960px;
-  max-width: 100%;
-  height: 120px;
+  flex-shrink: 0;
+  width: clamp(960px, 100%, 2400px);
+  aspect-ratio: 2400 / 304;
 }
 
 .site-banner {
   display: block;
   width: 100%;
-  height: 120px;
-  object-fit: cover;
+  height: 100%;
+  object-fit: contain;
   object-position: center;
   border-radius: 0 0 16px 16px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.08);
@@ -475,10 +465,7 @@ social-links a:hover {
 
 .banner-overlay {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   display: flex;
   flex-direction: column;
   padding: 1.5rem 2rem;
@@ -506,6 +493,38 @@ social-links a:hover {
   box-shadow: 0 2px 8px rgba(0,0,0,0.10);
   display: inline-block;
   width: fit-content;
+}
+
+@media (max-width: 768px) {
+  .banner-hero {
+    flex-direction: column;
+  }
+
+  .banner-hero > .banner-overlay {
+    position: static;
+    inset: auto;
+    width: 100%;
+    height: auto;
+    order: -1;
+    padding: 0;
+  }
+
+  .banner-header {
+    justify-content: flex-end;
+  }
+
+  .site-nav {
+    width: 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: clamp(0.75rem, 4vw, 2rem);
+    padding: 0.5rem clamp(1rem, 4vw, 2rem);
+    box-sizing: border-box;
+  }
+
+  .site-nav a {
+    font-size: 0.85rem;
+  }
 }
 
 /* =========================
