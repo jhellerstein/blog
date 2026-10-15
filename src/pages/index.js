@@ -57,11 +57,13 @@ export const pageQuery = graphql`
         title
       }
     }
-    allMdx(sort: [
-    { frontmatter: { date: DESC } }
-    { frontmatter: { order: ASC } }
-    ]
-  ) {
+    allMdx(
+      filter: { isPublished: { eq: true } },
+      sort: [
+      { frontmatter: { date: DESC } }
+      { frontmatter: { order: ASC } }
+      ]
+    ) {
       nodes {
         excerpt(pruneLength: 50)
         fields {

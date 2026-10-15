@@ -31,7 +31,10 @@ exports.createPages = async ({ graphql, actions, reporter }) => {
 
   const result = await graphql(`
     {
-      allMdx(sort: { frontmatter: { date: DESC } }) {
+      allMdx(
+        filter: { isPublished: { eq: true } }
+        sort: { frontmatter: { date: DESC } }
+      ) {
         nodes {
           id
           fields {
@@ -88,6 +91,7 @@ exports.createSchemaCustomization = ({ actions }) => {
     type Mdx implements Node {
       frontmatter: Frontmatter!
       fields: Fields!
+      isPublished: Boolean!
     }
 
     type Fields {
@@ -95,4 +99,17 @@ exports.createSchemaCustomization = ({ actions }) => {
       readingTime: String!
     }
   `);
+};
+
+exports.createResolvers = ({ createResolvers }) => {
+  createResolvers({
+    Mdx: {
+      isPublished: {
+        resolve: (source) => {
+          if (!source.frontmatter || !source.frontmatter.date) return false;
+          return new Date(source.frontmatter.date) <= new Date();
+        },
+      },
+    },
+  });
 };

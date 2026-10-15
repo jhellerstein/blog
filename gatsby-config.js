@@ -113,9 +113,12 @@ module.exports = {
                 })
               })
             },
-            query: `{
-              allMdx(sort: {frontmatter: {date: DESC}}) {
-                nodes {
+              query: `{
+                allMdx(
+                  filter: { isPublished: { eq: true } }
+                  sort: {frontmatter: {date: DESC}}
+                ) {
+                  nodes {
                   excerpt
                   body
                   fields {
